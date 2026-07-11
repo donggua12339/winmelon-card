@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const routes = [
   {
@@ -58,6 +59,23 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach(async (to) => {
+  if (to.path.startsWith('/admin') && to.name !== 'admin-login') {
+    const auth = useAuthStore();
+    if (!auth.isAuthenticated) {
+      return { name: 'admin-login', query: { redirect: to.fullPath } };
+    }
+    // 已登录但未拉取用户信息
+    if (!auth.user) {
+      await auth.fetchMe();
+      if (!auth.isAuthenticated) {
+        return { name: 'admin-login', query: { redirect: to.fullPath } };
+      }
+    }
+  }
+  return true;
 });
 
 export default router;

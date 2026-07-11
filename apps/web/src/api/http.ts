@@ -19,7 +19,7 @@ const http: AxiosInstance = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('wm_access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -43,7 +43,9 @@ http.interceptors.response.use(
     const data = error.response?.data;
     const message = data?.message ?? error.message ?? '网络异常';
     if (status === 401) {
-      localStorage.removeItem('access_token');
+      localStorage.removeItem('wm_access_token');
+      localStorage.removeItem('wm_refresh_token');
+      // 不在此处自动跳转，由路由守卫处理
       ElMessage.error('登录已过期，请重新登录');
     } else if (status === 429) {
       ElMessage.warning('请求过于频繁，请稍后再试');

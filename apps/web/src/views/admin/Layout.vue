@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { RouterView, RouterLink } from 'vue-router';
+import { RouterView, RouterLink, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { ElMessageBox } from 'element-plus';
+
+const router = useRouter();
+const auth = useAuthStore();
+
+async function onLogout(): Promise<void> {
+  await ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' });
+  await auth.logout();
+  router.replace('/admin/login');
+}
 </script>
 
 <template>
@@ -16,7 +27,13 @@ import { RouterView, RouterLink } from 'vue-router';
     </el-aside>
     <el-container>
       <el-header class="header">
-        <RouterLink to="/" class="back">← 返回首页</RouterLink>
+        <div class="left">
+          <RouterLink to="/" class="back">← 返回首页</RouterLink>
+        </div>
+        <div class="right">
+          <span class="user">{{ auth.user?.username ?? '-' }}</span>
+          <el-button link type="primary" @click="onLogout">退出</el-button>
+        </div>
       </el-header>
       <el-main>
         <RouterView />
@@ -46,10 +63,15 @@ import { RouterView, RouterLink } from 'vue-router';
   border-bottom: 1px solid #e6e6e6;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 16px;
 }
 .back {
   color: #606266;
   text-decoration: none;
+}
+.user {
+  margin-right: 12px;
+  color: #606266;
 }
 </style>
