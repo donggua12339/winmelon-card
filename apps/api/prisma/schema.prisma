@@ -1,0 +1,316 @@
+// ============================================================
+// WM 官方虚拟卡密交易平台 - Prisma Schema
+// ============================================================
+// 生成客户端：npx prisma generate
+// 迁移：npx prisma migrate dev --name init
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 用户与权限
+// ============================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  MERCHANT
+  STAFF
+}
+
+model User {
+  id           String         @id @default(uuid())
+  username     String         @unique @db.VarChar(64)
+  email        String         @unique @db.VarChar(255)
+  passwordHash String         @db.VarChar(255)
+  role         UserRole       @default(STAFF)
+  merchantId   String?        @unique
+  merchant     Merchant?      @relation(fields: [merchantId], references: [id])
+  isActive     Boolean        @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  auditLogs    AuditLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+// ============================================================
+// 商户与店铺
+// ============================================================
+
+model Merchant {
+  id           String   @id @default(uuid())
+  code         String   @unique @db.VarChar(32)
+  name         String   @db.VarChar(128)
+  contactEmail String  @db.VarChar(255)
+  status       MerchantStatus @default(PENDING)
+  commissionRate Decimal(5,4) @default(0)
+  balance      Decimal(12,2) @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  users        User[]
+  shops        Shop[]
+  products     Product[]
+
+  @@map("merchants")
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+model Shop {
+  id          String   @id @default(uuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id])
+  code        String   @unique @db.VarChar(32) // 路径式访问 /shop/:code
+  name        String   @db.VarChar(128)
+  announcement String?  @db.Text
+  footerHtml  String?  @db.Text
+  isOnline    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+  orders      Order[]
+
+  @@index([merchantId])
+  @@map("shops")
+}
+
+// ============================================================
+// 商品与卡密
+// ============================================================
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  shopId      String
+  name        String   @db.VarChar(64)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+
+  @@index([shopId])
+  @@map("product_categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id])
+  categoryId  String?
+  category    ProductCategory? @relation(fields: [categoryId], references: [id])
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  price       Decimal(10,2)
+  originalPrice Decimal(10,2)?
+  status      ProductStatus @default(OFFLINE)
+  purchaseLimit Int?   // 单次限购数量
+  isAutoDelivery Boolean @default(true)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  stockCards  StockCard[]
+  orderItems  OrderItem[]
+
+  @@index([shopId])
+  @@index([merchantId])
+  @@index([status])
+  @@map("products")
+}
+
+enum ProductStatus {
+  ONLINE
+  OFFLINE
+  SOLD_OUT
+}
+
+model StockCard {
+  id              String   @id @default(uuid())
+  productId       String
+  product         Product @relation(fields: [productId], references: [id])
+  contentCiphertext String @db.Text    // AES-256-GCM 密文（base64）
+  contentIv       String   @db.VarChar(64)  // 初始化向量（base64）
+  contentTag      String   @db.VarChar(64)  // 认证标签（base64）
+  contentHash     String   @db.VarChar(64)  // 内容 SHA256（用于去重）
+  status          StockCardStatus @default(AVAILABLE)
+  orderId         String?  @unique            // 唯一索引：防同一订单重复取卡
+  order           Order?   @relation(fields: [orderId], references: [id])
+  importedAt      DateTime @default(now())
+  soldAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([productId, status])
+  @@index([contentHash])
+  @@map("stock_cards")
+}
+
+enum StockCardStatus {
+  AVAILABLE
+  LOCKED
+  SOLD
+  DISABLED
+}
+
+// ============================================================
+// 订单
+// ============================================================
+
+model Order {
+  id             String   @id @default(uuid())
+  orderNo        String   @unique @db.VarChar(32)   // 雪花 ID，对外暴露
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id])
+  buyerEmail     String   @db.VarChar(255)
+  buyerContact   String?  @db.VarChar(64)  // 手机号
+  buyerIp        String   @db.VarChar(64)
+  buyerUserAgent String?  @db.VarChar(512)
+  totalAmount    Decimal(12,2)
+  status         OrderStatus @default(PENDING)
+  expireAt       DateTime
+  paidAt         DateTime?
+  deliveredAt    DateTime?
+  viewedAt       DateTime?  // 买家首次查看卡密时间，作为"确认收货"依据
+  idempotencyKey String?  @unique @db.VarChar(64)
+  remark         String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items          OrderItem[]
+  stockCards     StockCard[]
+  payments       Payment[]
+
+  @@index([shopId])
+  @@index([status])
+  @@index([buyerEmail])
+  @@index([expireAt])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING    // 待支付
+  PAID       // 已支付
+  DELIVERED  // 已发卡
+  EXPIRED    // 已超时
+  REFUNDED   // 已退款
+  CLOSED     // 已关闭
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String   @db.VarChar(255)  // 下单时快照
+  unitPrice   Decimal(10,2)
+  quantity    Int
+  subtotal   Decimal(12,2)
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ============================================================
+// 支付
+// ============================================================
+
+model Payment {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id])
+  channel        String   @db.VarChar(32)
+  tradeNo        String?  @unique @db.VarChar(64)  // 通道流水号
+  amount         Decimal(12,2)
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  rawNotify      String?  @db.Text  // 原始回调数据（脱敏后）
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([channel, status])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model PaymentChannel {
+  id          String   @id @default(uuid())
+  code        String   @unique @db.VarChar(32)  // epay / wechat / alipay / usdt
+  name        String   @db.VarChar(64)
+  isAvailable Boolean  @default(true)
+  config      String   @db.Text  // 加密存储配置（密钥等）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("payment_channels")
+}
+
+// ============================================================
+// 系统配置
+// ============================================================
+
+model SystemConfig {
+  id    String   @id @default(uuid())
+  key   String   @unique @db.VarChar(64)
+  value String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
+}
+
+// ============================================================
+// 审计日志（仅追加，禁止 update/delete）
+// ============================================================
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?
+  actor        User?    @relation(fields: [actorId], references: [id])
+  actorName    String?  @db.VarChar(64)
+  action       String   @db.VarChar(64)
+  resourceType String   @db.VarChar(64)
+  resourceId   String?  @db.VarChar(128)
+  beforeData  String?  @db.Text
+  afterData   String?  @db.Text
+  ip           String?  @db.VarChar(64)
+  userAgent    String?  @db.VarChar(512)
+  requestId    String?  @db.VarChar(64)
+  createdAt    DateTime @default(now())
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

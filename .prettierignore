@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+coverage/
+*.lcov
+pnpm-lock.yaml
+package-lock.json

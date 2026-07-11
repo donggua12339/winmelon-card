@@ -1,0 +1,31 @@
+{
+  "name": "wm-card",
+  "version": "0.1.0",
+  "description": "WM 官方虚拟卡密交易平台 - 开源发卡网",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace @wm-card/api run dev",
+    "dev:web": "npm --workspace @wm-card/web run dev",
+    "build:api": "npm --workspace @wm-card/api run build",
+    "build:web": "npm --workspace @wm-card/web run build",
+    "build:shared": "npm --workspace @wm-card/shared-types run build",
+    "lint": "eslint . --ext .ts,.vue --max-warnings 0",
+    "format": "prettier --write \"**/*.{ts,vue,json,md}\"",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "husky": "^9.1.4",
+    "lint-staged": "^15.2.8",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
