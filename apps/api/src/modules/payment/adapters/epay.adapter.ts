@@ -27,11 +27,8 @@ export class EpayAdapter implements PaymentAdapter {
   readonly code = 'epay';
   private readonly logger = new Logger(EpayAdapter.name);
 
-  async createPayment(
-    params: CreatePaymentParams,
-    config: Record<string, unknown>,
-  ): Promise<CreatePaymentResult> {
-    const cfg = config as EpayConfig;
+  async createPayment(params: CreatePaymentParams, config: Record<string, unknown>): Promise<CreatePaymentResult> {
+    const cfg = config as unknown as EpayConfig;
     const args: Record<string, string> = {
       pid: cfg.pid,
       type: 'alipay', // MVP 固定支付宝，后续可参数化
@@ -55,7 +52,7 @@ export class EpayAdapter implements PaymentAdapter {
     _headers: Record<string, string | undefined>,
     config: Record<string, unknown>,
   ): NotifyResult {
-    const cfg = config as EpayConfig;
+    const cfg = config as unknown as EpayConfig;
     let params: Record<string, string>;
     try {
       params = Object.fromEntries(new URLSearchParams(rawBody));
@@ -72,9 +69,9 @@ export class EpayAdapter implements PaymentAdapter {
 
     const success = params.trade_status === 'TRADE_SUCCESS';
     return {
-      outTradeNo: params.out_trade_no,
-      tradeNo: params.trade_no,
-      amount: params.money,
+      outTradeNo: params.out_trade_no ?? '',
+      tradeNo: params.trade_no ?? '',
+      amount: params.money ?? '',
       success,
       raw: {
         pid: params.pid,

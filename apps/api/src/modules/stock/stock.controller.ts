@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { StockService } from './stock.service';
 import { ImportStockDto } from './dto/import-stock.dto';
@@ -26,11 +16,7 @@ export class StockController {
   constructor(private readonly stockService: StockService) {}
 
   @Post('import')
-  async import(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() dto: ImportStockDto,
-    @Req() req: Request,
-  ) {
+  async import(@CurrentUser() user: CurrentUserPayload, @Body() dto: ImportStockDto, @Req() req: Request) {
     this.requireMerchant(user);
     return this.stockService.import(user.merchantId!, dto, this.ctx(user, req));
   }
@@ -48,21 +34,13 @@ export class StockController {
   }
 
   @Post(':id/reveal')
-  async reveal(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('id') id: string,
-    @Req() req: Request,
-  ) {
+  async reveal(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string, @Req() req: Request) {
     this.requireMerchant(user);
     return this.stockService.reveal(user.merchantId!, id, this.ctx(user, req));
   }
 
   @Delete(':id')
-  async delete(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('id') id: string,
-    @Req() req: Request,
-  ) {
+  async delete(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string, @Req() req: Request) {
     this.requireMerchant(user);
     await this.stockService.delete(user.merchantId!, id, this.ctx(user, req));
     return { ok: true };

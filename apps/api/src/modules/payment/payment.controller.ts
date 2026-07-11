@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  Req,
-  UseGuards,
-  HttpCode,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards, HttpCode } from '@nestjs/common';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -51,24 +40,22 @@ export class PaymentController {
   @Post('payment/notify/:channel')
   @Public()
   @HttpCode(200)
-  async notify(
-    @Param('channel') channel: string,
-    @Req() req: Request & { rawBody?: string },
-  ) {
+  async notify(@Param('channel') channel: string, @Req() req: Request & { rawBody?: string }) {
     // rawBody 由 main.ts 启用 verify 钩子填充
     const raw = req.rawBody ?? '';
     const text = typeof raw === 'string' ? raw : Buffer.from(raw).toString('utf8');
-    const result = await this.paymentService.handleNotify(channel, text, req.headers as Record<string, string | undefined>);
+    const result = await this.paymentService.handleNotify(
+      channel,
+      text,
+      req.headers as Record<string, string | undefined>,
+    );
     return result;
   }
 
   /** 同步跳转 */
   @Get('payment/return/:channel')
   @Public()
-  async return(
-    @Param('channel') channel: string,
-    @Query() query: Record<string, string>,
-  ) {
+  async return(@Param('channel') channel: string, @Query() query: Record<string, string>) {
     return this.paymentService.handleReturn(channel, query);
   }
 

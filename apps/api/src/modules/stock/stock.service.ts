@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
@@ -34,7 +29,11 @@ export class StockService {
    * - 解析 CSV → 逐行加密 → 去重（contentHash） → 批量入库
    * - 单次最多 5000 条，避免长事务
    */
-  async import(merchantId: string, dto: { productId: string; csvContent: string }, ctx: AuditCtx): Promise<ImportResult> {
+  async import(
+    merchantId: string,
+    dto: { productId: string; csvContent: string },
+    ctx: AuditCtx,
+  ): Promise<ImportResult> {
     const product = await this.prisma.product.findFirst({
       where: { id: dto.productId, merchantId, deletedAt: null },
     });
@@ -56,7 +55,7 @@ export class StockService {
     let duplicated = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i];
+      const raw = lines[i] ?? '';
       const content = raw.trim();
       if (!content) continue;
       if (content.length > MAX_CARD_LENGTH) {
@@ -102,7 +101,7 @@ export class StockService {
           skipDuplicates: true,
         });
         imported = result.count;
-      } catch (err) {
+      } catch {
         // 若仍因并发冲突，回退到逐条插入
         for (const item of finalCreate) {
           try {
@@ -281,8 +280,9 @@ export class StockService {
       // 处理双引号包裹（含逗号的情况）
       const parsed = this.parseCsvLine(line);
       // 一行只取第一列（卡密内容），其余忽略
-      if (parsed.length > 0 && parsed[0].trim()) {
-        result.push(parsed[0]);
+      const first = parsed[0];
+      if (first && first.trim()) {
+        result.push(first);
       }
     }
     return result;

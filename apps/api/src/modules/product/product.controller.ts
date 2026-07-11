@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { ProductService, type AuditCtx } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -45,11 +33,7 @@ export class ProductController {
   }
 
   @Post()
-  async create(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() dto: CreateProductDto,
-    @Req() req: Request,
-  ) {
+  async create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateProductDto, @Req() req: Request) {
     this.requireMerchant(user);
     const ctx = this.ctx(user, req);
     return this.productService.create(user.merchantId!, dto.shopId, dto, ctx);
@@ -80,11 +64,7 @@ export class ProductController {
   }
 
   @Delete(':id')
-  async delete(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('id') id: string,
-    @Req() req: Request,
-  ) {
+  async delete(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string, @Req() req: Request) {
     this.requireMerchant(user);
     const ctx = this.ctx(user, req);
     await this.productService.delete(user.merchantId!, id, ctx);

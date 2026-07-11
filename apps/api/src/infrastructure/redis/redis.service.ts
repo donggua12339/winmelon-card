@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import IORedis from 'ioredis';
+import IORedis, { type RedisOptions } from 'ioredis';
 
 @Injectable()
 export class RedisService extends IORedis implements OnModuleDestroy {
@@ -8,9 +8,14 @@ export class RedisService extends IORedis implements OnModuleDestroy {
 
   constructor(config: ConfigService) {
     const url = config.get<string>('REDIS_URL');
-    super(url ? url : { host: '127.0.0.1', port: 6379 });
+    const opts: RedisOptions = url ? (url as RedisOptions) : { host: '127.0.0.1', port: 6379 };
+    super(opts);
     this.on('error', (err) => this.logger.error(`Redis error: ${err.message}`));
     this.on('connect', () => this.logger.log('Redis connected'));
+  }
+
+  onModuleDestroy(): void {
+    this.disconnect();
   }
 
   /**

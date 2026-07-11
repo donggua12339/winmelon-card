@@ -15,10 +15,7 @@ export class ShopController {
 
   @Get(':code/products')
   @Public()
-  async listProducts(
-    @Param('code') code: string,
-    @Query() query: ShopProductQueryDto,
-  ) {
+  async listProducts(@Param('code') code: string, @Query() query: ShopProductQueryDto) {
     const shop = await this.shopService.findShopByCode(code);
     return this.shopService.listProducts(shop.id, {
       categoryId: query.categoryId,

@@ -45,7 +45,10 @@ export class DeliveryService {
    * 手动补发（后台触发）
    * 与自动发卡逻辑一致，仅入口不同
    */
-  async manualRetry(orderId: string, ctx: { actorId?: string; actorName?: string; ip?: string; requestId?: string }): Promise<{ delivered: number }> {
+  async manualRetry(
+    orderId: string,
+    ctx: { actorId?: string; actorName?: string; ip?: string; requestId?: string },
+  ): Promise<{ delivered: number }> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       select: { id: true, orderNo: true, status: true },

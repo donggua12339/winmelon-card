@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
@@ -257,7 +251,10 @@ export class OrderService {
   /**
    * 后台：订单列表
    */
-  async listForAdmin(merchantId: string | undefined, query: { page: number; pageSize: number; status?: string; keyword?: string }) {
+  async listForAdmin(
+    merchantId: string | undefined,
+    query: { page: number; pageSize: number; status?: string; keyword?: string },
+  ) {
     const where: Prisma.OrderWhereInput = {};
     if (merchantId) {
       where.shop = { merchantId };
@@ -266,10 +263,7 @@ export class OrderService {
       where.status = query.status as Prisma.OrderWhereInput['status'];
     }
     if (query.keyword) {
-      where.OR = [
-        { orderNo: { contains: query.keyword } },
-        { buyerEmail: { contains: query.keyword } },
-      ];
+      where.OR = [{ orderNo: { contains: query.keyword } }, { buyerEmail: { contains: query.keyword } }];
     }
 
     const [items, total] = await Promise.all([

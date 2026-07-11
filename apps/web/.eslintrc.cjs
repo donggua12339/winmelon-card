@@ -18,7 +18,7 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  ignorePatterns: ['dist', 'node_modules', '*.d.ts'],
+  ignorePatterns: ['dist', 'node_modules'],
   rules: {
     'vue/multi-word-component-names': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',

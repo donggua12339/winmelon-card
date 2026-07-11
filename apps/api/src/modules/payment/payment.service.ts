@@ -29,7 +29,7 @@ export class PaymentService {
     config: ConfigService,
   ) {
     this.baseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:3000');
-    this.adapters = new Map([
+    this.adapters = new Map<string, PaymentAdapter>([
       [epayAdapter.code, epayAdapter],
       [mockAdapter.code, mockAdapter],
     ]);
@@ -45,7 +45,14 @@ export class PaymentService {
   async createPayment(orderId: string, channelCode: string, ctx: { ip: string; requestId?: string }) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, orderNo: true, totalAmount: true, status: true, expireAt: true, items: { select: { productName: true } } },
+      select: {
+        id: true,
+        orderNo: true,
+        totalAmount: true,
+        status: true,
+        expireAt: true,
+        items: { select: { productName: true } },
+      },
     });
     if (!order) throw new NotFoundException('订单不存在');
     if (order.status !== 'PENDING') throw new BadRequestException(`订单状态为 ${order.status}，无法支付`);
@@ -55,7 +62,10 @@ export class PaymentService {
     const adapter = this.getAdapter(channelCode);
     const config = this.decryptConfig(channel.config);
 
-    const subject = order.items.map((it) => it.productName).join(', ').slice(0, 128);
+    const subject = order.items
+      .map((it) => it.productName)
+      .join(', ')
+      .slice(0, 128);
     const result = await adapter.createPayment(
       {
         orderId: order.id,
@@ -167,7 +177,12 @@ export class PaymentService {
         // 更新 Payment
         const payment = await tx.payment.updateMany({
           where: { orderId: order.id, channel: channelCode, status: 'PENDING' },
-          data: { status: 'SUCCESS', tradeNo: notify.tradeNo, paidAt: new Date(), rawNotify: JSON.stringify(notify.raw).slice(0, 65535) },
+          data: {
+            status: 'SUCCESS',
+            tradeNo: notify.tradeNo,
+            paidAt: new Date(),
+            rawNotify: JSON.stringify(notify.raw).slice(0, 65535),
+          },
         });
         if (payment.count === 0) {
           // 没有对应的 PENDING Payment，新建一条
@@ -257,7 +272,9 @@ export class PaymentService {
 
     const cfg = this.decryptConfig(channel.config) as { key: string };
     const { createHash } = await import('crypto');
-    const sign = createHash('md5').update(`${order.orderNo}${order.totalAmount.toString()}${cfg.key}`, 'utf8').digest('hex');
+    const sign = createHash('md5')
+      .update(`${order.orderNo}${order.totalAmount.toString()}${cfg.key}`, 'utf8')
+      .digest('hex');
     const body = new URLSearchParams({
       out_trade_no: order.orderNo,
       money: order.totalAmount.toString(),
@@ -266,9 +283,7 @@ export class PaymentService {
 
     // 异步触发回调（不阻塞响应）
     setImmediate(() => {
-      this.handleNotify('mock', body, {}).catch((err) =>
-        this.logger.error(`模拟回调失败: ${(err as Error).message}`),
-      );
+      this.handleNotify('mock', body, {}).catch((err) => this.logger.error(`模拟回调失败: ${(err as Error).message}`));
     });
   }
 

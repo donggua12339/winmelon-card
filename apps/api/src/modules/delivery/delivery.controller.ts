@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { DeliveryService } from './delivery.service';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -14,11 +14,7 @@ export class DeliveryController {
 
   /** 手动补发 */
   @Post(':orderId/retry')
-  async retry(
-    @Param('orderId') orderId: string,
-    @CurrentUser() user: CurrentUserPayload,
-    @Req() req: Request,
-  ) {
+  async retry(@Param('orderId') orderId: string, @CurrentUser() user: CurrentUserPayload, @Req() req: Request) {
     return this.deliveryService.manualRetry(orderId, {
       actorId: user.userId,
       actorName: user.username,

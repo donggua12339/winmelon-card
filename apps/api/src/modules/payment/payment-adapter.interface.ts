@@ -18,7 +18,11 @@ export interface PaymentAdapter {
    * 解析异步回调，必须内部验签
    * 验签失败抛 Error
    */
-  parseNotify(rawBody: string, headers: Record<string, string | undefined>, config: Record<string, unknown>): NotifyResult;
+  parseNotify(
+    rawBody: string,
+    headers: Record<string, string | undefined>,
+    config: Record<string, unknown>,
+  ): NotifyResult;
 
   /** 同步跳转（return_url）参数解析，可选实现 */
   parseReturn?(query: Record<string, string>, config: Record<string, unknown>): NotifyResult;
@@ -41,7 +45,7 @@ export interface CreatePaymentResult {
 
 export interface NotifyResult {
   outTradeNo: string; // 商户订单号（我方 orderNo）
-  tradeNo: string;    // 通道流水号
+  tradeNo: string; // 通道流水号
   amount: string;
   success: boolean;
   raw: unknown;

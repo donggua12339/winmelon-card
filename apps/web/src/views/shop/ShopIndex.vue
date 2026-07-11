@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { useRoute } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import { get, post } from '@/api/http';
 
 interface Product {
@@ -33,7 +33,6 @@ interface CreatePaymentResult {
 }
 
 const route = useRoute();
-const router = useRouter();
 const shopCode = route.params.merchantCode as string;
 
 const shop = ref<ShopInfo | null>(null);
@@ -129,13 +128,7 @@ onMounted(() => {
   <div class="shop">
     <div v-if="shop" class="header">
       <h1>{{ shop.name }}</h1>
-      <el-alert
-        v-if="shop.announcement"
-        type="info"
-        :closable="false"
-        :title="shop.announcement"
-        show-icon
-      />
+      <el-alert v-if="shop.announcement" type="info" :closable="false" :title="shop.announcement" show-icon />
     </div>
 
     <div v-loading="loading" class="products">
@@ -166,11 +159,7 @@ onMounted(() => {
           <span class="price">¥{{ selectedProduct?.price }}</span>
         </el-form-item>
         <el-form-item label="数量">
-          <el-input-number
-            v-model="orderForm.quantity"
-            :min="1"
-            :max="selectedProduct?.purchaseLimit || 99"
-          />
+          <el-input-number v-model="orderForm.quantity" :min="1" :max="selectedProduct?.purchaseLimit || 99" />
         </el-form-item>
         <el-form-item label="合计">
           <span class="price total">

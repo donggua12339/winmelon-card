@@ -1,4 +1,5 @@
-import { IsString, IsInt, IsOptional, IsEmail, MaxLength, Min, Max, Type } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsEmail, MaxLength, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateOrderItemDto {
   @IsString()

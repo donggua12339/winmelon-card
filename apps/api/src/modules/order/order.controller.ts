@@ -9,7 +9,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
-import { IsInt, IsOptional, IsString, Max, Min, Type } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 class AdminOrderQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) page?: number = 1;
@@ -26,10 +27,7 @@ export class OrderController {
   @Post('shop/:code/orders')
   @Public()
   @Throttle({ perMin: 10 })
-  async create(
-    @Body() dto: CreateOrderDto,
-    @Req() req: Request,
-  ) {
+  async create(@Body() dto: CreateOrderDto, @Req() req: Request) {
     return this.orderService.create(dto, {
       ip: req.ip ?? '',
       userAgent: req.get('user-agent'),

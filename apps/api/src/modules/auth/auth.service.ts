@@ -27,7 +27,11 @@ export class AuthService {
     this.refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
   }
 
-  async login(username: string, password: string, ctx: { ip: string; userAgent?: string; requestId?: string }): Promise<LoginResult> {
+  async login(
+    username: string,
+    password: string,
+    ctx: { ip: string; userAgent?: string; requestId?: string },
+  ): Promise<LoginResult> {
     const user = await this.prisma.user.findFirst({
       where: { username, deletedAt: null },
     });
@@ -68,7 +72,10 @@ export class AuthService {
     return this.issueTokens(user, ctx);
   }
 
-  async refresh(refreshToken: string, ctx: { ip: string; userAgent?: string; requestId?: string }): Promise<LoginResult> {
+  async refresh(
+    refreshToken: string,
+    ctx: { ip: string; userAgent?: string; requestId?: string },
+  ): Promise<LoginResult> {
     let payload: TokenPayload;
     try {
       payload = await this.jwt.verifyAsync<TokenPayload>(refreshToken, {

@@ -154,13 +154,7 @@ onMounted(fetchList);
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openDetail(row.id)">详情</el-button>
-          <el-button
-            v-if="row.status === 'PAID'"
-            link
-            type="warning"
-            size="small"
-            @click="onRetry(row.id)"
-          >
+          <el-button v-if="row.status === 'PAID'" link type="warning" size="small" @click="onRetry(row.id)">
             手动补发
           </el-button>
         </template>
@@ -212,9 +206,7 @@ onMounted(fetchList);
         </template>
       </div>
       <template #footer>
-        <el-button v-if="detail?.status === 'PAID'" type="warning" @click="onRetry(detail!.id)">
-          手动补发
-        </el-button>
+        <el-button v-if="detail?.status === 'PAID'" type="warning" @click="onRetry(detail!.id)"> 手动补发 </el-button>
         <el-button @click="detailVisible = false">关闭</el-button>
       </template>
     </el-dialog>

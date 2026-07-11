@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { get, post, del } from '@/api/http';
 import type { UploadRawFile } from 'element-plus';
@@ -58,15 +58,11 @@ const revealDialogVisible = ref(false);
 const revealContent = ref('');
 const revealing = ref(false);
 
-const selectedProduct = computed<Product | undefined>(() =>
-  products.value.find((p) => p.id === selectedProductId.value),
-);
-
 async function fetchProducts(): Promise<void> {
   const data = await get<{ items: Product[] }>('/admin/products', { params: { pageSize: 100 } });
   products.value = data.items;
   if (products.value.length && !selectedProductId.value) {
-    selectedProductId.value = products.value[0].id;
+    selectedProductId.value = products.value[0]!.id;
   }
 }
 
@@ -141,9 +137,7 @@ async function onReveal(row: StockItem): Promise<void> {
   });
   revealing.value = true;
   try {
-    const { content } = await post<{ content: string; status: string }>(
-      `/admin/stock/${row.id}/reveal`,
-    );
+    const { content } = await post<{ content: string; status: string }>(`/admin/stock/${row.id}/reveal`);
     revealContent.value = content;
     revealDialogVisible.value = true;
   } finally {
@@ -186,23 +180,11 @@ onMounted(fetchProducts);
     <div class="toolbar">
       <h2>卡密管理</h2>
       <div class="actions">
-        <el-select
-          v-model="selectedProductId"
-          placeholder="选择商品"
-          style="width: 240px"
-          filterable
-        >
-          <el-option
-            v-for="p in products"
-            :key="p.id"
-            :label="`${p.name} (可用 ${p.stock.available})`"
-            :value="p.id"
-          />
+        <el-select v-model="selectedProductId" placeholder="选择商品" style="width: 240px" filterable>
+          <el-option v-for="p in products" :key="p.id" :label="`${p.name} (可用 ${p.stock.available})`" :value="p.id" />
         </el-select>
         <el-button :disabled="!selectedProductId" @click="fetchList">刷新</el-button>
-        <el-button type="primary" :disabled="!selectedProductId" @click="openImport">
-          批量导入
-        </el-button>
+        <el-button type="primary" :disabled="!selectedProductId" @click="openImport"> 批量导入 </el-button>
       </div>
     </div>
 
@@ -288,12 +270,7 @@ onMounted(fetchProducts);
         title="每行一条卡密，支持双引号包裹；单次最多 5000 条，单条最长 4096 字符"
         style="margin-bottom: 12px"
       />
-      <el-upload
-        :auto-upload="false"
-        :show-file-list="false"
-        accept=".csv,.txt"
-        :on-change="onFileChange"
-      >
+      <el-upload :auto-upload="false" :show-file-list="false" accept=".csv,.txt" :on-change="onFileChange">
         <el-button>从文件读取</el-button>
         <template #tip>
           <span v-if="importFile" style="margin-left: 8px">{{ importFile.name }}</span>
@@ -366,8 +343,16 @@ onMounted(fetchProducts);
   font-weight: bold;
   margin-top: 4px;
 }
-.stat-value.success { color: #67c23a; }
-.stat-value.warning { color: #e6a23c; }
-.stat-value.info { color: #909399; }
-.stat-value.danger { color: #f56c6c; }
+.stat-value.success {
+  color: #67c23a;
+}
+.stat-value.warning {
+  color: #e6a23c;
+}
+.stat-value.info {
+  color: #909399;
+}
+.stat-value.danger {
+  color: #f56c6c;
+}
 </style>

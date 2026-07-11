@@ -1,11 +1,4 @@
 {
-  "lint-staged": {
-    "*.{ts,vue}": [
-      "prettier --write",
-      "eslint --fix --max-warnings 0"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
-  }
+  "*.{ts,vue}": ["prettier --write", "eslint --fix --max-warnings 0"],
+  "*.{json,md,yml,yaml}": ["prettier --write"]
 }

@@ -1,12 +1,7 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../../common/decorators/roles.decorator';
-import type { JwtRequestUser } from '../auth/jwt.strategy';
+import type { JwtRequestUser } from '../../modules/auth/jwt.strategy';
 
 /**
  * 角色守卫

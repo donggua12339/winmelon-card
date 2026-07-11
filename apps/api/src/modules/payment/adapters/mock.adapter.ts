@@ -24,10 +24,7 @@ export class MockAdapter implements PaymentAdapter {
   readonly code = 'mock';
   private readonly logger = new Logger(MockAdapter.name);
 
-  async createPayment(
-    params: CreatePaymentParams,
-    _config: Record<string, unknown>,
-  ): Promise<CreatePaymentResult> {
+  async createPayment(params: CreatePaymentParams, _config: Record<string, unknown>): Promise<CreatePaymentResult> {
     const paymentUrl = `/payment/mock-pay?orderNo=${encodeURIComponent(params.orderNo)}&amount=${encodeURIComponent(params.amount)}`;
     return { paymentUrl };
   }
@@ -37,7 +34,7 @@ export class MockAdapter implements PaymentAdapter {
     _headers: Record<string, string | undefined>,
     config: Record<string, unknown>,
   ): NotifyResult {
-    const cfg = config as MockConfig;
+    const cfg = config as unknown as MockConfig;
     let params: Record<string, string>;
     try {
       params = Object.fromEntries(new URLSearchParams(rawBody));
@@ -45,15 +42,15 @@ export class MockAdapter implements PaymentAdapter {
       throw new Error('回调参数解析失败');
     }
 
-    const expected = this.sign(params.out_trade_no, params.money, cfg.key);
+    const expected = this.sign(params.out_trade_no ?? '', params.money ?? '', cfg.key);
     if (params.sign !== expected) {
       throw new Error('验签失败');
     }
 
     return {
-      outTradeNo: params.out_trade_no,
-      tradeNo: `MOCK_${params.out_trade_no}`,
-      amount: params.money,
+      outTradeNo: params.out_trade_no ?? '',
+      tradeNo: `MOCK_${params.out_trade_no ?? ''}`,
+      amount: params.money ?? '',
       success: true,
       raw: params,
     };

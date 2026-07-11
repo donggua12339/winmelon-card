@@ -197,9 +197,7 @@ onMounted(fetchList);
       </el-table-column>
       <el-table-column label="库存" width="140">
         <template #default="{ row }">
-          <span :class="{ 'low-stock': row.stock.available === 0 }">
-            可用 {{ row.stock.available }}
-          </span>
+          <span :class="{ 'low-stock': row.stock.available === 0 }"> 可用 {{ row.stock.available }} </span>
           / 锁 {{ row.stock.locked }} / 售 {{ row.stock.sold }}
         </template>
       </el-table-column>
@@ -237,11 +235,7 @@ onMounted(fetchList);
       @current-change="fetchList"
     />
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogMode === 'create' ? '新建商品' : '编辑商品'"
-      width="560px"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新建商品' : '编辑商品'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="商品名" prop="name">
           <el-input v-model="form.name" maxlength="255" show-word-limit />
@@ -250,13 +244,7 @@ onMounted(fetchList);
           <el-input-number v-model="form.price" :min="0.01" :max="99999.99" :precision="2" />
         </el-form-item>
         <el-form-item label="原价(元)">
-          <el-input-number
-            v-model="form.originalPrice"
-            :min="0.01"
-            :max="99999.99"
-            :precision="2"
-            placeholder="可选"
-          />
+          <el-input-number v-model="form.originalPrice" :min="0.01" :max="99999.99" :precision="2" placeholder="可选" />
         </el-form-item>
         <el-form-item label="单次限购">
           <el-input-number v-model="form.purchaseLimit" :min="1" :max="9999" placeholder="可选" />

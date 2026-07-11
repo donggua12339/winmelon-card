@@ -66,9 +66,7 @@ export class SnowflakeService implements OnModuleInit {
 
     const ts = now - BigInt(SnowflakeService.EPOCH);
     const id =
-      (ts << SnowflakeService.TIMESTAMP_SHIFT) |
-      (this.machineId << SnowflakeService.MACHINE_SHIFT) |
-      this.sequence;
+      (ts << SnowflakeService.TIMESTAMP_SHIFT) | (this.machineId << SnowflakeService.MACHINE_SHIFT) | this.sequence;
     return id.toString();
   }
 }
