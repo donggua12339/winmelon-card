@@ -65,6 +65,18 @@ async function main(): Promise<void> {
     },
   });
 
+  // 模拟支付通道（开发测试用，生产环境禁用）
+  await prisma.paymentChannel.upsert({
+    where: { code: 'mock' },
+    update: {},
+    create: {
+      code: 'mock',
+      name: '模拟支付（开发用）',
+      isAvailable: process.env.NODE_ENV !== 'production',
+      config: JSON.stringify({ key: 'mock-key-change-in-prod' }),
+    },
+  });
+
   // 默认系统配置
   await prisma.systemConfig.upsert({
     where: { key: 'site.name' },

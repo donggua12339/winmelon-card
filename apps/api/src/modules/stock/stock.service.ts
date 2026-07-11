@@ -7,7 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
-import { CryptoUtil } from '../../common/utils/crypto.util';
+import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
 import { StockQueryDto } from './dto/stock-query.dto';
 import type { AuditCtx } from '../product/product.service';
 
@@ -26,7 +26,7 @@ export class StockService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-    private readonly crypto: CryptoUtil,
+    private readonly crypto: AesGcmService,
   ) {}
 
   /**
@@ -63,7 +63,7 @@ export class StockService {
         errors.push(`第 ${i + 1} 行：超过 ${MAX_CARD_LENGTH} 字符`);
         continue;
       }
-      const hash = this.crypto.hash(content);
+      const hash = this.crypto.sha256(content);
       if (seen.has(hash)) {
         duplicated++;
         continue;
@@ -219,7 +219,11 @@ export class StockService {
       throw new ConflictException('已售卡密请通过订单查询');
     }
 
-    const content = this.crypto.decrypt(card.contentCiphertext, card.contentIv, card.contentTag);
+    const content = this.crypto.decrypt({
+      ciphertext: card.contentCiphertext,
+      iv: card.contentIv,
+      tag: card.contentTag,
+    });
 
     await this.auditLog.record({
       actorId: ctx.actorId,

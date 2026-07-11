@@ -18,6 +18,11 @@ const routes = [
     component: () => import('@/views/shop/OrderQuery.vue'),
   },
   {
+    path: '/payment/mock-pay',
+    name: 'mock-pay',
+    component: () => import('@/views/shop/MockPay.vue'),
+  },
+  {
     path: '/admin/login',
     name: 'admin-login',
     component: () => import('@/views/admin/Login.vue'),

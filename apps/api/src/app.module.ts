@@ -2,13 +2,20 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { CryptoModule } from './infrastructure/crypto/crypto.module';
+import { SnowflakeService } from './infrastructure/id/snowflake.service';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { ProductModule } from './modules/product/product.module';
 import { StockModule } from './modules/stock/stock.module';
+import { ShopModule } from './modules/shop/shop.module';
+import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { DeliveryModule } from './modules/delivery/delivery.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -20,15 +27,22 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
       envFilePath: ['.env', '.env.local'],
     }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     RedisModule,
+    CryptoModule,
     AuditLogModule,
     AuthModule,
     ProductModule,
     StockModule,
+    ShopModule,
+    OrderModule,
+    PaymentModule,
+    DeliveryModule,
     HealthModule,
   ],
   providers: [
+    SnowflakeService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
