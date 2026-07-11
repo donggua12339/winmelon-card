@@ -7,6 +7,8 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { ProductModule } from './modules/product/product.module';
+import { StockModule } from './modules/stock/stock.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -22,6 +24,8 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     RedisModule,
     AuditLogModule,
     AuthModule,
+    ProductModule,
+    StockModule,
     HealthModule,
   ],
   providers: [
