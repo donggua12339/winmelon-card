@@ -27,4 +27,12 @@ module.exports = {
     'no-console': ['error', { allow: ['warn', 'error'] }],
     'prettier/prettier': 'error',
   },
+  overrides: [
+    {
+      files: ['scripts/**/*.ts'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+  ],
 };

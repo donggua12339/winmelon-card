@@ -45,7 +45,7 @@ export class ProductService {
       requestId: ctx.requestId,
     });
 
-    return product;
+    return this.serialize(product);
   }
 
   async update(merchantId: string, id: string, dto: UpdateProductDto, ctx: AuditCtx) {
@@ -76,7 +76,7 @@ export class ProductService {
       requestId: ctx.requestId,
     });
 
-    return after;
+    return this.serialize(after);
   }
 
   async updateStatus(merchantId: string, id: string, status: 'ONLINE' | 'OFFLINE', ctx: AuditCtx) {
@@ -110,7 +110,7 @@ export class ProductService {
       requestId: ctx.requestId,
     });
 
-    return after;
+    return this.serialize(after);
   }
 
   async delete(merchantId: string, id: string, ctx: AuditCtx) {
@@ -228,6 +228,43 @@ export class ProductService {
       throw new NotFoundException('商品不存在');
     }
     return product;
+  }
+
+  /** 统一序列化：Decimal -> string，避免前端收到 {s,e,d} 对象 */
+  private serialize(p: {
+    id: string;
+    shopId: string;
+    merchantId: string;
+    categoryId: string | null;
+    name: string;
+    description: string | null;
+    price: Prisma.Decimal;
+    originalPrice: Prisma.Decimal | null;
+    status: string;
+    purchaseLimit: number | null;
+    isAutoDelivery: boolean;
+    sort: number;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+  }) {
+    return {
+      id: p.id,
+      shopId: p.shopId,
+      merchantId: p.merchantId,
+      categoryId: p.categoryId,
+      name: p.name,
+      description: p.description,
+      price: p.price.toString(),
+      originalPrice: p.originalPrice?.toString() ?? null,
+      status: p.status,
+      purchaseLimit: p.purchaseLimit,
+      isAutoDelivery: p.isAutoDelivery,
+      sort: p.sort,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      deletedAt: p.deletedAt,
+    };
   }
 }
 

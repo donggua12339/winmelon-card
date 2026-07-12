@@ -57,6 +57,11 @@ const routes = [
         name: 'admin-payments',
         component: () => import('@/views/admin/Payments.vue'),
       },
+      {
+        path: 'system',
+        name: 'admin-system',
+        component: () => import('@/views/admin/SystemConfig.vue'),
+      },
     ],
   },
 ];

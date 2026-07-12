@@ -42,6 +42,10 @@ async function onLogout(): Promise<void> {
           <span>💳</span>
           <span>支付配置</span>
         </el-menu-item>
+        <el-menu-item index="/admin/system">
+          <span>⚙️</span>
+          <span>系统配置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

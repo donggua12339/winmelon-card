@@ -102,4 +102,57 @@ export class ShopService {
       originalPrice: product.originalPrice?.toString() ?? null,
     };
   }
+
+  // ====== 后台管理 ======
+
+  async findMyShop(merchantId: string) {
+    const shop = await this.prisma.shop.findFirst({
+      where: { merchantId },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        announcement: true,
+        footerHtml: true,
+        isOnline: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    if (!shop) {
+      throw new NotFoundException('店铺不存在');
+    }
+    return shop;
+  }
+
+  async updateShop(
+    merchantId: string,
+    shopId: string,
+    dto: { name?: string; announcement?: string | null; footerHtml?: string | null; isOnline?: boolean },
+  ) {
+    const shop = await this.prisma.shop.findFirst({ where: { id: shopId, merchantId } });
+    if (!shop) {
+      throw new NotFoundException('店铺不存在或无权操作');
+    }
+
+    const data: { name?: string; announcement?: string | null; footerHtml?: string | null; isOnline?: boolean } = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.announcement !== undefined) data.announcement = dto.announcement;
+    if (dto.footerHtml !== undefined) data.footerHtml = dto.footerHtml;
+    if (dto.isOnline !== undefined) data.isOnline = dto.isOnline;
+
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data,
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        announcement: true,
+        footerHtml: true,
+        isOnline: true,
+        updatedAt: true,
+      },
+    });
+  }
 }
