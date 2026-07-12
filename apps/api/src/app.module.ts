@@ -20,6 +20,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
 import { MerchantApplicationModule } from './modules/merchant-application/merchant-application.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { RiskModule } from './modules/risk/risk.module';
+import { OpenApiModule } from './modules/open-api/open-api.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -48,6 +49,7 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     MerchantApplicationModule,
     StatsModule,
     RiskModule,
+    OpenApiModule,
     HealthModule,
   ],
   providers: [

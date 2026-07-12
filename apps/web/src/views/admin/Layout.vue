@@ -62,6 +62,10 @@ async function onLogout(): Promise<void> {
           <span>🏪</span>
           <span>商户审核</span>
         </el-menu-item>
+        <el-menu-item index="/admin/api-keys">
+          <span>🔑</span>
+          <span>API Key</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

@@ -64,6 +64,7 @@ model Merchant {
   users        User[]
   shops        Shop[]
   products     Product[]
+  apiKeys      ApiKey[]
 
   @@map("merchants")
 }
@@ -73,6 +74,25 @@ enum MerchantStatus {
   ACTIVE
   SUSPENDED
   REJECTED
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  key         String    @unique @db.VarChar(64) // sk_live_xxx
+  keyHint     String    @db.VarChar(16)         // sk_live_...xxxx（列表显示用）
+  name        String    @db.VarChar(64)         // 描述性名称
+  merchantId  String
+  merchant    Merchant  @relation(fields: [merchantId], references: [id])
+  scopes      String    @db.VarChar(255) @default("read,write") // read / write
+  rateLimitPerMin Int   @default(60)             // 每分钟请求上限
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@index([merchantId])
+  @@map("api_keys")
 }
 
 model Shop {

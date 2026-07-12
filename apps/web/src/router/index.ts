@@ -87,6 +87,11 @@ const routes = [
         name: 'admin-merchant-applications',
         component: () => import('@/views/admin/MerchantApplications.vue'),
       },
+      {
+        path: 'api-keys',
+        name: 'admin-api-keys',
+        component: () => import('@/views/admin/ApiKeys.vue'),
+      },
     ],
   },
 ];
