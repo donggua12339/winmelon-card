@@ -79,3 +79,5 @@ deploy/ssl/*.pem
 deploy/ssl/live/
 backups/
 *.sql.gz
+tmp_pw.txt
+deploy/ssl/winmelon.cn.*.pem
