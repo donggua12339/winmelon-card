@@ -73,3 +73,9 @@ coverage/
 # ---- 凭证占位（防止误提交）----
 credentials.json
 serviceAccount.json
+
+# ---- SSL 证书与备份 ----
+deploy/ssl/*.pem
+deploy/ssl/live/
+backups/
+*.sql.gz
