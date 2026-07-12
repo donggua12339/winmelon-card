@@ -2,7 +2,9 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('admin-stats')
 @Controller('admin/stats')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')

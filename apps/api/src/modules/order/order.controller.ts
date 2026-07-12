@@ -11,6 +11,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiTags } from '@nestjs/swagger';
 
 class AdminOrderQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) page?: number = 1;
@@ -19,6 +20,7 @@ class AdminOrderQueryDto {
   @IsOptional() @IsString() keyword?: string;
 }
 
+@ApiTags('order')
 @Controller()
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}

@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, ClassSerializerInterceptor, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
@@ -21,6 +22,7 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('PORT', 3000);
   const prefix = config.get<string>('API_PREFIX', 'api');
   const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:5173');
+  const enableSwagger = config.get<string>('ENABLE_SWAGGER', 'true') !== 'false';
 
   app.setGlobalPrefix(prefix);
 
@@ -50,6 +52,38 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalInterceptors(new ResponseInterceptor());
+
+  // Swagger 文档
+  if (enableSwagger) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('WM Card API')
+      .setDescription('WM 官方虚拟卡密交易平台 - API 文档')
+      .setVersion('1.0.0')
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' }, 'JWT')
+      .addTag('auth', '鉴权')
+      .addTag('shop', '买家侧 - 店铺/商品')
+      .addTag('order', '买家侧 - 订单')
+      .addTag('payment', '支付')
+      .addTag('admin-products', '后台 - 商品')
+      .addTag('admin-stock', '后台 - 卡密')
+      .addTag('admin-orders', '后台 - 订单')
+      .addTag('admin-payment-channels', '后台 - 支付通道')
+      .addTag('admin-shops', '后台 - 店铺')
+      .addTag('admin-audit-logs', '后台 - 审计日志')
+      .addTag('admin-stats', '后台 - 统计')
+      .addTag('admin-risk', '后台 - 风控')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${prefix}/docs`, app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
+      },
+      customSiteTitle: 'WM Card API 文档',
+    });
+    Logger.log(`📖 Swagger docs: http://localhost:${port}/${prefix}/docs`, 'Bootstrap');
+  }
 
   await app.listen(port);
   Logger.log(`🚀 API running on http://localhost:${port}/${prefix}`, 'Bootstrap');

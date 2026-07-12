@@ -5,7 +5,9 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('admin-delivery')
 @Controller('admin/delivery')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')

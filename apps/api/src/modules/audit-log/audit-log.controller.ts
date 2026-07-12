@@ -2,7 +2,9 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('admin-audit-logs')
 @Controller('admin/audit-logs')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN')

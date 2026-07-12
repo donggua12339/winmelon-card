@@ -6,7 +6,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('admin-shops')
 @Controller('admin/shops')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')

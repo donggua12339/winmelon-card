@@ -6,7 +6,9 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import type { LoginResult } from './dto/login-result.interface';
 import type { JwtRequestUser } from './jwt.strategy';
 import type { Request } from 'express';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

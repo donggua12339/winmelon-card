@@ -6,6 +6,7 @@ import { Throttle } from '../../common/decorators/throttle.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
+import { ApiTags } from '@nestjs/swagger';
 
 class CreatePaymentDto {
   @IsString()
@@ -21,6 +22,7 @@ class UpdateChannelDto {
   @IsOptional() @IsObject() config?: Record<string, unknown>;
 }
 
+@ApiTags('payment')
 @Controller()
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}

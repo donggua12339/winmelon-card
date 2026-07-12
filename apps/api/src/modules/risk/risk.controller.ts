@@ -4,6 +4,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { IsEmail, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiTags } from '@nestjs/swagger';
 
 class AddIpDto {
   @IsString() ip!: string;
@@ -17,6 +18,7 @@ class AddEmailDto {
   @IsOptional() @Type(() => Number) @IsNumber() @Min(1) @Max(720) hours?: number;
 }
 
+@ApiTags('admin-risk')
 @Controller('admin/risk')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN')

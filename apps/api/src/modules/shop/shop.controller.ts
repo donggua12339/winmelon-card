@@ -2,7 +2,9 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { ShopProductQueryDto } from './dto/shop-product-query.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('shop')
 @Controller('shop')
 export class ShopController {
   constructor(private readonly shopService: ShopService) {}

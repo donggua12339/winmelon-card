@@ -8,7 +8,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import type { AuditCtx } from '../product/product.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('admin-stock')
 @Controller('admin/stock')
 @UseGuards(RolesGuard)
 @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')
