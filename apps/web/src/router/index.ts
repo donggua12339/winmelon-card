@@ -18,6 +18,11 @@ const routes = [
     component: () => import('@/views/shop/OrderQuery.vue'),
   },
   {
+    path: '/merchant/apply',
+    name: 'merchant-apply',
+    component: () => import('@/views/shop/MerchantApply.vue'),
+  },
+  {
     path: '/payment/mock-pay',
     name: 'mock-pay',
     component: () => import('@/views/shop/MockPay.vue'),
@@ -76,6 +81,11 @@ const routes = [
         path: 'risk',
         name: 'admin-risk',
         component: () => import('@/views/admin/RiskControl.vue'),
+      },
+      {
+        path: 'merchant-applications',
+        name: 'admin-merchant-applications',
+        component: () => import('@/views/admin/MerchantApplications.vue'),
       },
     ],
   },

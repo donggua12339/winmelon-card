@@ -17,6 +17,7 @@ import { ShopModule } from './modules/shop/shop.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { MerchantApplicationModule } from './modules/merchant-application/merchant-application.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { RiskModule } from './modules/risk/risk.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
@@ -44,6 +45,7 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     OrderModule,
     PaymentModule,
     DeliveryModule,
+    MerchantApplicationModule,
     StatsModule,
     RiskModule,
     HealthModule,

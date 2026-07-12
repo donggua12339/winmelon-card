@@ -16,6 +16,7 @@ import { RouterLink } from 'vue-router';
         <div class="cta">
           <RouterLink to="/shop/main" class="btn-primary">进入店铺 →</RouterLink>
           <RouterLink to="/query" class="btn-ghost">订单查询</RouterLink>
+          <RouterLink to="/merchant/apply" class="btn-ghost">商户入驻</RouterLink>
         </div>
       </div>
     </section>

@@ -58,6 +58,10 @@ async function onLogout(): Promise<void> {
           <span>🛡️</span>
           <span>行为风控</span>
         </el-menu-item>
+        <el-menu-item index="/admin/merchant-applications">
+          <span>🏪</span>
+          <span>商户审核</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

@@ -357,3 +357,36 @@ model RiskRecord {
   @@index([action, createdAt])
   @@map("risk_records")
 }
+
+// ============================================================
+// V2：商户入驻申请
+// ============================================================
+
+model MerchantApplication {
+  id              String   @id @default(uuid())
+  contactName     String   @db.VarChar(64)
+  contactEmail    String   @db.VarChar(255)
+  contactPhone    String?  @db.VarChar(32)
+  merchantName    String   @db.VarChar(128) // 申请的商户名称
+  shopName        String   @db.VarChar(128) // 申请的店铺名称
+  shopCode        String   @db.VarChar(32) // 店铺路径码，如 /shop/myshop
+  businessScope   String?  @db.Text // 经营范围说明
+  status          ApplicationStatus @default(PENDING)
+  rejectReason    String?  @db.Text
+  reviewedById    String?  @db.VarChar(64)
+  reviewedAt      DateTime?
+  approvedMerchantId String? @db.VarChar(36) // 审核通过后创建的 merchant.id
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shopCode])
+  @@index([status])
+  @@index([contactEmail])
+  @@map("merchant_applications")
+}
+
+enum ApplicationStatus {
+  PENDING       // 待审核
+  APPROVED      // 已通过
+  REJECTED      // 已拒绝
+}
