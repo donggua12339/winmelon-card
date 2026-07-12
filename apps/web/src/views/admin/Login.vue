@@ -53,41 +53,112 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <div class="login">
-    <el-card>
-      <h2>管理员登录</h2>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" @submit.prevent="onSubmit">
+  <div class="login-page">
+    <div class="glass login-card">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <h1 class="brand-title"><span class="text-gradient-aurora">WM</span> Card</h1>
+        <p class="brand-subtitle">管理后台</p>
+      </div>
+
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="onSubmit">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="用户名" autocomplete="username" />
+          <el-input v-model="form.username" placeholder="请输入用户名" size="large" autocomplete="username" />
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input
             v-model="form.password"
             type="password"
-            placeholder="密码"
+            placeholder="请输入密码"
+            size="large"
             show-password
             autocomplete="current-password"
             @keyup.enter="onSubmit"
           />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" @click="onSubmit">登录</el-button>
-          <RouterLink to="/" class="back">← 返回首页</RouterLink>
-        </el-form-item>
+        <el-button
+          type="primary"
+          size="large"
+          :loading="loading"
+          native-type="submit"
+          class="submit-btn"
+          @click="onSubmit"
+        >
+          登 录
+        </el-button>
       </el-form>
-    </el-card>
+
+      <div class="footer">
+        <RouterLink to="/" class="back">← 返回首页</RouterLink>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.login {
-  padding: 60px 16px;
-  max-width: 480px;
-  margin: 0 auto;
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 32px;
+  animation: fade-in-up 0.6s ease-out;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.brand-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  animation: float 4s ease-in-out infinite;
+}
+
+.brand-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.brand-subtitle {
+  color: var(--wm-text-tertiary);
+  font-size: 13px;
+  margin: 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.submit-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  margin-top: 8px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 24px;
+}
+
 .back {
-  margin-left: 12px;
-  color: #606266;
+  color: var(--wm-text-tertiary);
   text-decoration: none;
+  font-size: 13px;
+  transition: color 0.3s ease;
+}
+
+.back:hover {
+  color: var(--wm-accent-cyan);
 }
 </style>

@@ -235,7 +235,7 @@ onMounted(fetchProducts);
             size="small"
             :disabled="row.status === 'SOLD'"
             :loading="revealing"
-            @click="onReveal(row)"
+            @click="onReveal(row as StockItem)"
           >
             查看明文
           </el-button>
@@ -244,7 +244,7 @@ onMounted(fetchProducts);
             type="danger"
             size="small"
             :disabled="row.status === 'SOLD' || row.status === 'LOCKED'"
-            @click="onDelete(row)"
+            @click="onDelete(row as StockItem)"
           >
             删除
           </el-button>

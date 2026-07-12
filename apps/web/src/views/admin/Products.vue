@@ -212,16 +212,16 @@ onMounted(fetchList);
       </el-table-column>
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button link type="primary" size="small" @click="openEdit(row as Product)">编辑</el-button>
           <el-button
             link
             :type="row.status === 'ONLINE' ? 'warning' : 'success'"
             size="small"
-            @click="toggleStatus(row)"
+            @click="toggleStatus(row as Product)"
           >
             {{ row.status === 'ONLINE' ? '下架' : '上架' }}
           </el-button>
-          <el-button link type="danger" size="small" @click="onDelete(row)">删除</el-button>
+          <el-button link type="danger" size="small" @click="onDelete(row as Product)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

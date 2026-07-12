@@ -1,0 +1,103 @@
+// ============================================================
+// 玻璃拟态工具类
+// ============================================================
+
+// 基础玻璃卡
+.glass {
+  background: var(--wm-glass-bg);
+  backdrop-filter: blur(var(--wm-glass-blur));
+  -webkit-backdrop-filter: blur(var(--wm-glass-blur));
+  border: 1px solid var(--wm-border-glass);
+  border-radius: var(--wm-radius-lg);
+  box-shadow: var(--wm-shadow-card);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--wm-glass-bg-hover);
+    border-color: var(--wm-border-glass-hover);
+  }
+}
+
+// 渐变边框玻璃卡
+.glass-gradient-border {
+  position: relative;
+  background: var(--wm-bg-elevated);
+  border-radius: var(--wm-radius-lg);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--wm-border-gradient);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+// 辉光效果
+.glow-purple {
+  box-shadow: var(--wm-shadow-glow-purple);
+}
+.glow-cyan {
+  box-shadow: var(--wm-shadow-glow-cyan);
+}
+.glow-pink {
+  box-shadow: var(--wm-shadow-glow-pink);
+}
+
+// 渐变文字
+.text-gradient {
+  background: var(--wm-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-aurora {
+  background: var(--wm-gradient-aurora);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// 价格霓虹
+.price-neon {
+  color: var(--wm-accent-pink);
+  text-shadow: 0 0 12px rgba(244, 114, 182, 0.5);
+  font-weight: 700;
+}
+
+// 数字高亮
+.num-highlight {
+  font-family: var(--wm-font-mono);
+  font-weight: 700;
+  background: var(--wm-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// 状态点
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+
+  &.online {
+    background: var(--wm-accent-green);
+    box-shadow: 0 0 8px var(--wm-accent-green);
+  }
+  &.offline {
+    background: var(--wm-text-tertiary);
+  }
+  &.warning {
+    background: var(--wm-accent-amber);
+    box-shadow: 0 0 8px var(--wm-accent-amber);
+  }
+}

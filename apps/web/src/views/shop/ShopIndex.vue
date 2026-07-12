@@ -89,7 +89,6 @@ async function onSubmitOrder(): Promise<void> {
 
   submitting.value = true;
   try {
-    // 幂等 key：邮箱+商品+数量+时间戳（5 分钟内同一组合视为同一订单）
     const idempotencyKey = `${orderForm.value.buyerEmail}_${selectedProduct.value.id}_${orderForm.value.quantity}_${Math.floor(Date.now() / 300000)}`;
 
     const order = await post<CreateOrderResult>(`/shop/${shopCode}/orders`, {
@@ -102,16 +101,13 @@ async function onSubmitOrder(): Promise<void> {
 
     orderDialogVisible.value = false;
 
-    // 选择支付通道（MVP 固定 mock）
     const pay = await post<CreatePaymentResult>('/payments', {
       orderId: order.orderId,
       channel: 'mock',
     });
 
-    // 跳转支付页
     window.location.href = pay.paymentUrl;
   } catch (err) {
-    // 错误已由 http 拦截器提示
     console.error(err);
   } finally {
     submitting.value = false;
@@ -126,122 +122,376 @@ onMounted(() => {
 
 <template>
   <div class="shop">
-    <div v-if="shop" class="header">
-      <h1>{{ shop.name }}</h1>
-      <el-alert v-if="shop.announcement" type="info" :closable="false" :title="shop.announcement" show-icon />
-    </div>
+    <!-- 店铺 Hero -->
+    <header class="shop-header">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <div v-if="shop" class="shop-info">
+          <h1 class="shop-name">{{ shop.name }}</h1>
+          <p v-if="shop.announcement" class="announcement">{{ shop.announcement }}</p>
+        </div>
+        <RouterLink to="/" class="back-link">← 返回首页</RouterLink>
+      </div>
+    </header>
 
-    <div v-loading="loading" class="products">
-      <el-empty v-if="!loading && products.length === 0" description="暂无在售商品" />
-      <el-card v-for="p in products" :key="p.id" shadow="hover" class="product-card">
-        <div class="product">
-          <div class="info">
-            <h3>{{ p.name }}</h3>
-            <p v-if="p.description" class="desc">{{ p.description }}</p>
-            <div class="meta">
-              <span class="price">¥{{ p.price }}</span>
-              <span v-if="p.originalPrice" class="original">¥{{ p.originalPrice }}</span>
-              <span class="stock">库存 {{ p.stock }}</span>
-              <span v-if="p.purchaseLimit" class="limit">限购 {{ p.purchaseLimit }}</span>
+    <!-- 商品列表 -->
+    <main class="products-section">
+      <div class="section-header">
+        <h2>在售商品</h2>
+        <span class="count">{{ products.length }} 件</span>
+      </div>
+
+      <div v-loading="loading" class="products-grid">
+        <el-empty v-if="!loading && products.length === 0" description="暂无在售商品" />
+        <div
+          v-for="(p, i) in products"
+          :key="p.id"
+          class="glass product-card"
+          :style="{ animationDelay: `${i * 0.08}s` }"
+        >
+          <div class="product-main">
+            <h3 class="product-name">{{ p.name }}</h3>
+            <p v-if="p.description" class="product-desc">{{ p.description }}</p>
+            <div class="product-meta">
+              <span v-if="p.purchaseLimit" class="meta-tag limit">限购 {{ p.purchaseLimit }}</span>
+              <span class="meta-tag stock">库存 {{ p.stock }}</span>
             </div>
           </div>
-          <el-button type="primary" :disabled="p.stock === 0" @click="openOrder(p)">立即购买</el-button>
+          <div class="product-footer">
+            <div class="price-area">
+              <span class="price">¥{{ p.price }}</span>
+              <span v-if="p.originalPrice" class="original">¥{{ p.originalPrice }}</span>
+            </div>
+            <button class="buy-btn" :disabled="p.stock === 0" @click="openOrder(p)">
+              {{ p.stock === 0 ? '已售罄' : '立即购买' }}
+            </button>
+          </div>
         </div>
-      </el-card>
-    </div>
+      </div>
+    </main>
 
-    <el-dialog v-model="orderDialogVisible" title="确认订单" width="440px">
-      <el-form label-width="80px">
-        <el-form-item label="商品">
-          <span>{{ selectedProduct?.name }}</span>
-        </el-form-item>
-        <el-form-item label="单价">
-          <span class="price">¥{{ selectedProduct?.price }}</span>
-        </el-form-item>
-        <el-form-item label="数量">
-          <el-input-number v-model="orderForm.quantity" :min="1" :max="selectedProduct?.purchaseLimit || 99" />
-        </el-form-item>
-        <el-form-item label="合计">
-          <span class="price total">
-            ¥{{ (Number(selectedProduct?.price || 0) * orderForm.quantity).toFixed(2) }}
-          </span>
-        </el-form-item>
-        <el-form-item label="邮箱" required>
-          <el-input v-model="orderForm.buyerEmail" placeholder="用于接收卡密和查询订单" />
-        </el-form-item>
-        <el-form-item label="手机">
-          <el-input v-model="orderForm.buyerContact" placeholder="可选" />
-        </el-form-item>
-      </el-form>
+    <!-- 底部 -->
+    <footer class="shop-footer">
+      <RouterLink to="/query">订单查询</RouterLink>
+    </footer>
+
+    <!-- 下单弹窗 -->
+    <el-dialog v-model="orderDialogVisible" title="确认订单" width="440px" class="order-dialog">
+      <div class="order-product">
+        <div class="order-product-name">{{ selectedProduct?.name }}</div>
+        <div class="order-product-price">¥{{ selectedProduct?.price }}</div>
+      </div>
+
+      <div class="order-row">
+        <label>数量</label>
+        <el-input-number v-model="orderForm.quantity" :min="1" :max="selectedProduct?.purchaseLimit || 99" />
+      </div>
+
+      <div class="order-row total-row">
+        <label>合计</label>
+        <span class="total-price">¥{{ (Number(selectedProduct?.price || 0) * orderForm.quantity).toFixed(2) }}</span>
+      </div>
+
+      <div class="order-row">
+        <label>邮箱 <span class="required">*</span></label>
+        <el-input v-model="orderForm.buyerEmail" placeholder="用于接收卡密和查询订单" />
+      </div>
+
+      <div class="order-row">
+        <label>手机</label>
+        <el-input v-model="orderForm.buyerContact" placeholder="可选" />
+      </div>
+
       <template #footer>
         <el-button @click="orderDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="onSubmitOrder">去支付</el-button>
       </template>
     </el-dialog>
-
-    <div class="footer">
-      <RouterLink to="/query">查询订单</RouterLink>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .shop {
-  padding: 24px;
-  max-width: 960px;
-  margin: 0 auto;
-}
-.header {
-  margin-bottom: 24px;
-}
-.header h1 {
-  margin: 0 0 12px;
-}
-.products {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
-.product {
+
+/* 店铺 Hero */
+.shop-header {
+  position: relative;
+  padding: 48px 24px 32px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--wm-border-glass);
+}
+
+.hero-glow {
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(124, 58, 237, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.shop-name {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  margin: 0 0 12px;
+  background: var(--wm-gradient-aurora);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+.announcement {
+  color: var(--wm-text-secondary);
+  font-size: 14px;
+  margin: 0;
+  max-width: 600px;
+}
+
+.back-link {
+  color: var(--wm-text-tertiary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.3s ease;
+}
+
+.back-link:hover {
+  color: var(--wm-accent-cyan);
+}
+
+/* 商品区 */
+.products-section {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.count {
+  color: var(--wm-text-tertiary);
+  font-size: 13px;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  min-height: 200px;
+}
+
+.product-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fade-in-up 0.6s ease-out backwards;
+  transition: all 0.4s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--wm-border-glass-hover);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.2);
+}
+
+.product-main {
+  flex: 1;
+}
+
+.product-name {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--wm-text-primary);
+}
+
+.product-desc {
+  font-size: 13px;
+  color: var(--wm-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  padding: 2px 10px;
+  border-radius: var(--wm-radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.meta-tag.limit {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+
+.meta-tag.stock {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+}
+
+.product-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--wm-border-glass);
 }
-.info h3 {
-  margin: 0 0 8px;
-}
-.desc {
-  color: #606266;
-  font-size: 13px;
-  margin: 0 0 8px;
-}
-.meta {
+
+.price-area {
   display: flex;
-  gap: 12px;
-  align-items: center;
-  font-size: 13px;
-  color: #909399;
+  flex-direction: column;
 }
+
 .price {
-  color: #f56c6c;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--wm-accent-pink);
+  text-shadow: 0 0 16px rgba(244, 114, 182, 0.4);
+  line-height: 1;
 }
+
 .original {
+  font-size: 12px;
+  color: var(--wm-text-tertiary);
   text-decoration: line-through;
-  color: #c0c4cc;
+  margin-top: 4px;
 }
-.stock {
-  color: #67c23a;
+
+.buy-btn {
+  padding: 10px 20px;
+  background: var(--wm-gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--wm-radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
 }
-.limit {
-  color: #e6a23c;
+
+.buy-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
 }
-.total {
-  font-size: 22px;
+
+.buy-btn:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--wm-text-tertiary);
+  cursor: not-allowed;
+  box-shadow: none;
 }
-.footer {
+
+/* 底部 */
+.shop-footer {
+  padding: 24px;
   text-align: center;
-  margin-top: 32px;
+}
+
+.shop-footer a {
+  color: var(--wm-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.3s ease;
+}
+
+.shop-footer a:hover {
+  color: var(--wm-accent-cyan);
+}
+
+/* 下单弹窗 */
+.order-product {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--wm-glass-bg);
+  border-radius: var(--wm-radius-md);
+  margin-bottom: 20px;
+}
+
+.order-product-name {
+  font-weight: 600;
+}
+
+.order-product-price {
+  color: var(--wm-accent-pink);
+  font-weight: 700;
+}
+
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.order-row label {
+  width: 60px;
+  color: var(--wm-text-secondary);
+  font-size: 14px;
+}
+
+.required {
+  color: var(--wm-accent-red);
+}
+
+.order-row .el-input,
+.order-row .el-input-number {
+  flex: 1;
+}
+
+.total-row {
+  padding: 12px 0;
+  border-top: 1px dashed var(--wm-border-glass);
+  border-bottom: 1px dashed var(--wm-border-glass);
+}
+
+.total-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--wm-accent-pink);
+  text-shadow: 0 0 12px rgba(244, 114, 182, 0.3);
 }
 </style>
