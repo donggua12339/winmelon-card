@@ -1,4 +1,14 @@
-import { IsString, IsInt, IsOptional, IsEmail, MaxLength, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  IsOptional,
+  IsEmail,
+  MaxLength,
+  Min,
+  Max,
+  ValidateNested,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOrderItemDto {
@@ -29,5 +39,8 @@ export class CreateOrderDto {
   @MaxLength(64)
   idempotencyKey!: string;
 
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemDto)
+  @ArrayMinSize(1)
   items!: CreateOrderItemDto[];
 }

@@ -6,7 +6,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { CryptoModule } from './infrastructure/crypto/crypto.module';
-import { SnowflakeService } from './infrastructure/id/snowflake.service';
+import { IdModule } from './infrastructure/id/id.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
@@ -31,6 +31,7 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     PrismaModule,
     RedisModule,
     CryptoModule,
+    IdModule,
     AuditLogModule,
     AuthModule,
     ProductModule,
@@ -42,7 +43,6 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     HealthModule,
   ],
   providers: [
-    SnowflakeService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

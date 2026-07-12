@@ -87,7 +87,7 @@ export class OrderService {
           // SELECT ... FOR UPDATE 锁住 N 张可用卡
           const cards = await tx.$queryRaw<{ id: string }[]>`
             SELECT id FROM stock_cards
-            WHERE product_id = ${item.productId} AND status = 'AVAILABLE'
+            WHERE productId = ${item.productId} AND status = 'AVAILABLE'
             LIMIT ${item.quantity}
             FOR UPDATE
           `;
