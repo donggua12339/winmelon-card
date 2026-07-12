@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { MailService } from '../../infrastructure/mail/mail.service';
+import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
 
 /**
@@ -21,6 +23,8 @@ export class DeliveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly mail: MailService,
+    private readonly crypto: AesGcmService,
   ) {}
 
   @OnEvent(ORDER_PAID_EVENT)
@@ -130,6 +134,42 @@ export class DeliveryService {
       resourceType: 'order',
       resourceId: payload.orderId,
       afterData: { channel: payload.channel, orderNo: payload.orderNo },
+    });
+
+    // 发送卡密邮件（异步，不阻塞主流程）
+    this.sendDeliveryEmail(payload).catch((err) => {
+      this.logger.error(`卡密邮件发送失败 orderNo=${payload.orderNo}: ${(err as Error).message}`);
+    });
+  }
+
+  /** 查询订单关联卡密并发邮件 */
+  private async sendDeliveryEmail(payload: OrderPaidPayload): Promise<void> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: payload.orderId },
+      select: {
+        orderNo: true,
+        buyerEmail: true,
+        stockCards: {
+          where: { status: 'SOLD' },
+          select: { contentCiphertext: true, contentIv: true, contentTag: true, product: { select: { name: true } } },
+        },
+      },
+    });
+    if (!order || !order.buyerEmail) return;
+
+    const cards = order.stockCards.map((c) => ({
+      productName: c.product.name,
+      content: this.crypto.decrypt({
+        ciphertext: c.contentCiphertext,
+        iv: c.contentIv,
+        tag: c.contentTag,
+      }),
+    }));
+
+    await this.mail.sendCardDelivery({
+      to: order.buyerEmail,
+      orderNo: order.orderNo,
+      cards,
     });
   }
 }
