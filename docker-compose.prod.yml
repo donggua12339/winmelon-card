@@ -1,8 +1,7 @@
 # ============================================================
-# WM Card 生产环境编排
-# 单机部署：MySQL + Redis + API + Web(Nginx)
-# 用法：cp .env.prod.example .env.prod && vim .env.prod
-#       docker compose -f docker-compose.prod.yml up -d
+# WM Card 生产环境编排（混合部署版）
+# 复用宝塔 Nginx，WM Card 自带 MySQL + Redis + API
+# 用法：docker compose -f docker-compose.prod.yml up -d
 # ============================================================
 name: wm-card-prod
 
@@ -15,25 +14,23 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-authentication-plugin=mysql_native_password
-      - --max-connections=200
+      - --max-connections=100
       - --innodb-buffer-pool-size=256M
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-wmcard}
       MYSQL_USER: ${MYSQL_USER:-wmcard}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - '127.0.0.1:3307:3306'
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./deploy/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
-      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD}']
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    networks:
-      - wm-card-net
     logging:
       driver: json-file
       options:
@@ -55,6 +52,8 @@ services:
       --maxmemory-policy allkeys-lru
       --rename-command FLUSHALL ""
       --rename-command FLUSHDB ""
+    ports:
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis-data:/data
     healthcheck:
@@ -62,8 +61,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-    networks:
-      - wm-card-net
     logging:
       driver: json-file
       options:
@@ -91,8 +88,8 @@ services:
       PORT: 3000
       DATABASE_URL: mysql://${MYSQL_USER:-wmcard}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-wmcard}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-    networks:
-      - wm-card-net
+    ports:
+      - '127.0.0.1:3000:3000'
     healthcheck:
       test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/api/health']
       interval: 30s
@@ -109,43 +106,12 @@ services:
         limits:
           memory: 512M
 
-  web:
-    build:
-      context: .
-      dockerfile: deploy/docker/web.Dockerfile
-    container_name: wm-card-web-prod
-    restart: always
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./deploy/nginx/wm-card.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./deploy/ssl:/etc/nginx/ssl:ro
-      - ./deploy/nginx/certbot:/var/www/certbot:ro
-      - web-logs:/var/log/nginx
-    networks:
-      - wm-card-net
-    logging:
-      driver: json-file
-      options:
-        max-size: '10m'
-        max-file: '5'
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-
 volumes:
   mysql-data:
     driver: local
   redis-data:
     driver: local
-  web-logs:
-    driver: local
 
 networks:
-  wm-card-net:
+  default:
     driver: bridge

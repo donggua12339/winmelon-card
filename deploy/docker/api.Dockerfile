@@ -6,6 +6,9 @@
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
+# Prisma 需要 openssl + ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # 复制 workspace 配置
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json ./apps/api/
@@ -33,24 +36,23 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Prisma 运行时需要 openssl；wget 用于健康检查
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates wget && rm -rf /var/lib/apt/lists/*
+
 # 安全：以非 root 用户运行
 RUN groupadd --gid 1001 nodejs && \
     useradd --uid 1001 --gid nodejs --shell /bin/false --create-home nodejs
 
+# 仅复制生产必要文件（npm workspaces 的 node_modules 在根目录）
 COPY --from=builder /app/package.json /app/package-lock.json* ./
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared-types ./packages/shared-types
 
-# 安装仅 production 依赖
-RUN npm ci --omit=dev --no-audit --no-fund || true
-
-# Prisma Client 已在 builder 阶段生成，确保可被运行时访问
-RUN mkdir -p /app/apps/api/node_modules/.prisma && \
-    chown -R nodejs:nodejs /app
+# 设置权限
+RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 EXPOSE 3000
