@@ -67,6 +67,11 @@ const routes = [
         name: 'admin-audit-logs',
         component: () => import('@/views/admin/AuditLog.vue'),
       },
+      {
+        path: 'risk',
+        name: 'admin-risk',
+        component: () => import('@/views/admin/RiskControl.vue'),
+      },
     ],
   },
 ];

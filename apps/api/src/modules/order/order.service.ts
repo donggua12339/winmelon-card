@@ -5,6 +5,7 @@ import { RedisService } from '../../infrastructure/redis/redis.service';
 import { SnowflakeService } from '../../infrastructure/id/snowflake.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
+import { RiskControlService } from '../risk/risk-control.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -21,6 +22,7 @@ export class OrderService {
     private readonly snowflake: SnowflakeService,
     private readonly auditLog: AuditLogService,
     private readonly crypto: AesGcmService,
+    private readonly risk: RiskControlService,
   ) {}
 
   /**
@@ -28,6 +30,9 @@ export class OrderService {
    * 幂等：idempotencyKey 唯一索引兜底
    */
   async create(dto: CreateOrderDto, ctx: { ip: string; userAgent?: string; requestId?: string }) {
+    // 0. 风控检查（黑名单 + 熔断）
+    await this.risk.checkOrder(ctx.ip, dto.buyerEmail);
+
     // 1. 幂等检查
     const existing = await this.prisma.order.findUnique({
       where: { idempotencyKey: dto.idempotencyKey },
@@ -149,6 +154,13 @@ export class OrderService {
         ip: ctx.ip,
         userAgent: ctx.userAgent,
         requestId: ctx.requestId,
+      });
+
+      // 风控记录：下单成功（未支付）
+      await this.risk.record('order.pending', {
+        ip: ctx.ip,
+        email: dto.buyerEmail,
+        detail: `orderNo=${orderNo} amount=${result.totalAmount}`,
       });
 
       return {

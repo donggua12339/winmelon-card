@@ -313,3 +313,47 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+// ============================================================
+// 风控：IP/邮箱黑名单 + 行为记录
+// ============================================================
+
+model IpBlacklist {
+  id        String    @id @default(uuid())
+  ip        String    @unique @db.VarChar(64)
+  reason    String    @db.Text
+  source    String    @default("manual") @db.VarChar(32) // manual / auto
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([ip])
+  @@index([expiresAt])
+  @@map("ip_blacklist")
+}
+
+model EmailBlacklist {
+  id        String    @id @default(uuid())
+  email     String    @unique @db.VarChar(255)
+  reason    String    @db.Text
+  source    String    @default("manual") @db.VarChar(32)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("email_blacklist")
+}
+
+model RiskRecord {
+  id        String   @id @default(uuid())
+  ip        String   @db.VarChar(64)
+  email     String?  @db.VarChar(255)
+  action    String   @db.VarChar(64) // order.create / order.pending / login.failed 等
+  detail    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([email, createdAt])
+  @@index([action, createdAt])
+  @@map("risk_records")
+}
