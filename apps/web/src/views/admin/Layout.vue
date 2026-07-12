@@ -50,6 +50,10 @@ async function onLogout(): Promise<void> {
           <span>📋</span>
           <span>审计日志</span>
         </el-menu-item>
+        <el-menu-item index="/admin/stats">
+          <span>📈</span>
+          <span>高级统计</span>
+        </el-menu-item>
         <el-menu-item index="/admin/risk">
           <span>🛡️</span>
           <span>行为风控</span>

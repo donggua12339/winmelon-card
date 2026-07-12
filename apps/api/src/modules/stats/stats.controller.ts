@@ -85,4 +85,113 @@ export class StatsController {
 
     return grouped.map((g) => ({ status: g.status, count: g._count._all }));
   }
+
+  /** 24 小时时段分布（下单高峰） */
+  @Get('hourly')
+  async hourly(@Query('days') days?: string) {
+    const n = Math.min(Math.max(Number(days) || 7, 1), 90);
+    const since = new Date(Date.now() - n * 86400_000);
+
+    const orders = await this.prisma.order.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    });
+
+    const buckets = new Array(24).fill(0);
+    for (const o of orders) {
+      buckets[o.createdAt.getHours()]++;
+    }
+
+    return {
+      hours: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
+      counts: buckets,
+      total: orders.length,
+      peak: buckets.indexOf(Math.max(...buckets)),
+    };
+  }
+
+  /** 转化漏斗：下单 -> 支付 -> 发卡 */
+  @Get('funnel')
+  async funnel(@Query('days') days?: string) {
+    const n = Math.min(Math.max(Number(days) || 7, 1), 90);
+    const since = new Date(Date.now() - n * 86400_000);
+
+    const [total, paid, delivered] = await Promise.all([
+      this.prisma.order.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.order.count({ where: { createdAt: { gte: since }, status: { in: ['PAID', 'DELIVERED'] } } }),
+      this.prisma.order.count({ where: { createdAt: { gte: since }, status: 'DELIVERED' } }),
+    ]);
+
+    return {
+      stages: [
+        { name: '下单', count: total },
+        { name: '支付', count: paid },
+        { name: '发卡', count: delivered },
+      ],
+      rates: {
+        orderToPaid: total > 0 ? Number(((paid / total) * 100).toFixed(1)) : 0,
+        paidToDelivered: paid > 0 ? Number(((delivered / paid) * 100).toFixed(1)) : 0,
+        overall: total > 0 ? Number(((delivered / total) * 100).toFixed(1)) : 0,
+      },
+    };
+  }
+
+  /** 复购率（同邮箱多次购买） */
+  @Get('retention')
+  async retention(@Query('days') days?: string) {
+    const n = Math.min(Math.max(Number(days) || 30, 1), 365);
+    const since = new Date(Date.now() - n * 86400_000);
+
+    const buyersRaw = await this.prisma.order.groupBy({
+      by: ['buyerEmail'],
+      where: {
+        createdAt: { gte: since },
+        status: { in: ['PAID', 'DELIVERED'] },
+      },
+      _count: { _all: true },
+    });
+
+    // Prisma groupBy _count 类型推断有 bug，用 unknown 中转
+    const counted = buyersRaw
+      .filter((b) => b.buyerEmail)
+      .map((b) => ({
+        email: b.buyerEmail as string,
+        count: (b as unknown as { _count: { _all: number } })._count._all,
+      }));
+    const total = counted.length;
+    const repeat = counted.filter((b) => b.count > 1).length;
+    const topBuyers = counted
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((b) => ({ email: b.email, count: b.count }));
+
+    return {
+      totalBuyers: total,
+      repeatBuyers: repeat,
+      rate: total > 0 ? Number(((repeat / total) * 100).toFixed(1)) : 0,
+      topBuyers,
+    };
+  }
+
+  /** 汇总：客单价/总收入/总订单 */
+  @Get('summary')
+  async summary(@Query('days') days?: string) {
+    const n = Math.min(Math.max(Number(days) || 7, 1), 90);
+    const since = new Date(Date.now() - n * 86400_000);
+
+    const orders = await this.prisma.order.findMany({
+      where: { createdAt: { gte: since }, status: { in: ['PAID', 'DELIVERED'] } },
+      select: { totalAmount: true },
+    });
+
+    const revenue = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const avgOrder = orders.length > 0 ? revenue / orders.length : 0;
+
+    return {
+      days: n,
+      paidOrders: orders.length,
+      revenue: Number(revenue.toFixed(2)),
+      avgOrderValue: Number(avgOrder.toFixed(2)),
+    };
+  }
 }
