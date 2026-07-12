@@ -3,7 +3,7 @@
 # Stage 1: 依赖安装 + 编译
 # Stage 2: 仅产物 + node 用户运行
 # ============================================================
-FROM node:20-bookworm-slim AS builder
+FROM node:20-bookworm AS builder
 WORKDIR /app
 
 # Prisma 需要 openssl + ca-certificates
@@ -15,14 +15,18 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-# 安装依赖（包含 dev 依赖以编译）
-RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+# 安装依赖（必须用 development 才能装 nest CLI / typescript）
+ENV NODE_ENV=development
+# --ignore-scripts 防止 @prisma/client postinstall 覆盖我们 prebuilt 的 .prisma
+RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps --ignore-scripts
 
 # 复制源码
 COPY . .
 
-# 生成 Prisma Client
-RUN npm --workspace @wm-card/api run prisma:generate
+# 使用预生成的 Prisma Client（绕过 builder 中的 openssl 检测 bug）
+COPY apps/api/prebuilt-prisma/.prisma /app/node_modules/.prisma
+# swagger 8.1.1（兼容 nestjs 10，npm ci 在 builder 容器里没自动装）
+COPY apps/api/prebuilt-prisma/node_modules/@nestjs/swagger /app/node_modules/@nestjs/swagger
 
 # 构建
 RUN npm --workspace @wm-card/shared-types run build
@@ -31,7 +35,7 @@ RUN npm --workspace @wm-card/api run build
 # ============================================================
 # Stage 2: 生产镜像
 # ============================================================
-FROM node:20-bookworm-slim AS runner
+FROM node:20-bookworm AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

@@ -81,3 +81,7 @@ backups/
 *.sql.gz
 tmp_pw.txt
 deploy/ssl/winmelon.cn.*.pem
+
+# Docker 构建用的预生成 Prisma Client + Swagger 8（绕过容器内 prisma generate bug）
+# 本地保留用于 docker build，不入库
+apps/api/prebuilt-prisma/
