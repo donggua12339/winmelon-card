@@ -9,6 +9,7 @@ import { randomBytes } from 'crypto';
 import type { User, UserRole } from '@prisma/client';
 import type { TokenPayload } from './dto/token-payload.interface';
 import type { LoginResult } from './dto/login-result.interface';
+import { getDefaultRedirect } from './dto/login-result.interface';
 
 @Injectable()
 export class AuthService {
@@ -162,6 +163,7 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn: expiresInSec,
+      defaultRedirect: getDefaultRedirect(roles),
       user: {
         id: user.id,
         username: user.username,

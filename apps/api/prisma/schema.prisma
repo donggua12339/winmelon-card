@@ -57,6 +57,8 @@ model Merchant {
   status       MerchantStatus @default(PENDING)
   commissionRate Decimal @db.Decimal(5,4) @default(0)
   balance      Decimal @db.Decimal(12,2) @default(0)
+  // 商户工作台主题色（hex，如 #7c3aed）
+  themeColor   String?  @db.VarChar(9)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
