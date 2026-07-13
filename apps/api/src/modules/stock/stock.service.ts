@@ -30,13 +30,13 @@ export class StockService {
    * - 单次最多 5000 条，避免长事务
    */
   async import(
-    merchantId: string,
+    merchantId: string | undefined,
     dto: { productId: string; csvContent: string },
     ctx: AuditCtx,
   ): Promise<ImportResult> {
-    const product = await this.prisma.product.findFirst({
-      where: { id: dto.productId, merchantId, deletedAt: null },
-    });
+    const productWhere: Prisma.ProductWhereInput = { id: dto.productId, deletedAt: null };
+    if (merchantId) productWhere.merchantId = merchantId;
+    const product = await this.prisma.product.findFirst({ where: productWhere });
     if (!product) {
       throw new NotFoundException('商品不存在或无权操作');
     }
@@ -129,24 +129,25 @@ export class StockService {
     return { imported, duplicated, failed: errors.length, errors: errors.slice(0, 20) };
   }
 
-  async list(merchantId: string, query: StockQueryDto) {
-    const product = await this.prisma.product.findFirst({
-      where: { id: query.productId, merchantId, deletedAt: null },
-      select: { id: true },
-    });
+  async list(merchantId: string | undefined, query: StockQueryDto) {
+    const productWhere: Prisma.ProductWhereInput = { id: query.productId, deletedAt: null };
+    if (merchantId) productWhere.merchantId = merchantId;
+    const product = await this.prisma.product.findFirst({ where: productWhere, select: { id: true } });
     if (!product) {
       throw new ForbiddenException('无权查看该商品的卡密');
     }
 
-    const where: Prisma.StockCardWhereInput = { productId: query.productId };
-    if (query.status) where.status = query.status;
+    const stockWhere: Prisma.StockCardWhereInput = { productId: query.productId };
+    if (query.status) {
+      stockWhere.status = query.status as Prisma.StockCardWhereInput['status'];
+    }
 
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 50;
 
     const [items, total] = await Promise.all([
       this.prisma.stockCard.findMany({
-        where,
+        where: stockWhere,
         orderBy: { importedAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -160,7 +161,7 @@ export class StockService {
           soldAt: true,
         },
       }),
-      this.prisma.stockCard.count({ where }),
+      this.prisma.stockCard.count({ where: stockWhere }),
     ]);
 
     return {
@@ -174,9 +175,11 @@ export class StockService {
     };
   }
 
-  async stats(merchantId: string, productId: string) {
+  async stats(merchantId: string | undefined, productId: string) {
+    const productWhere: Prisma.ProductWhereInput = { id: productId, deletedAt: null };
+    if (merchantId) productWhere.merchantId = merchantId;
     const product = await this.prisma.product.findFirst({
-      where: { id: productId, merchantId, deletedAt: null },
+      where: productWhere,
       select: { id: true },
     });
     if (!product) {
@@ -206,12 +209,16 @@ export class StockService {
    * - 仅 AVAILABLE/LOCKED/DISABLED 可查看，SOLD 状态需走订单查询
    * - 每次查看写审计日志
    */
-  async reveal(merchantId: string, cardId: string, ctx: AuditCtx): Promise<{ content: string; status: string }> {
+  async reveal(
+    merchantId: string | undefined,
+    cardId: string,
+    ctx: AuditCtx,
+  ): Promise<{ content: string; status: string }> {
     const card = await this.prisma.stockCard.findUnique({
       where: { id: cardId },
       include: { product: { select: { merchantId: true, name: true } } },
     });
-    if (!card || card.product.merchantId !== merchantId) {
+    if (!card || (merchantId && card.product.merchantId !== merchantId)) {
       throw new NotFoundException('卡密不存在或无权查看');
     }
     if (card.status === 'SOLD') {
@@ -239,12 +246,12 @@ export class StockService {
     return { content, status: card.status };
   }
 
-  async delete(merchantId: string, cardId: string, ctx: AuditCtx): Promise<void> {
+  async delete(merchantId: string | undefined, cardId: string, ctx: AuditCtx): Promise<void> {
     const card = await this.prisma.stockCard.findUnique({
       where: { id: cardId },
       include: { product: { select: { merchantId: true } } },
     });
-    if (!card || card.product.merchantId !== merchantId) {
+    if (!card || (merchantId && card.product.merchantId !== merchantId)) {
       throw new NotFoundException('卡密不存在或无权操作');
     }
     if (card.status === 'SOLD' || card.status === 'LOCKED') {

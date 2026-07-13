@@ -24,6 +24,13 @@ export class AdminShopController {
     return this.shopService.findMyShop(user.merchantId!);
   }
 
+  /** SUPER_ADMIN 列出所有店铺（用于代管商品） */
+  @Get()
+  @Roles('SUPER_ADMIN')
+  async listAll() {
+    return this.shopService.listAllShops();
+  }
+
   @Put(':id')
   async updateShop(
     @CurrentUser() user: CurrentUserPayload,

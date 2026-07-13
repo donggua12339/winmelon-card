@@ -105,6 +105,31 @@ export class ShopService {
 
   // ====== 后台管理 ======
 
+  /** SUPER_ADMIN 列出所有店铺 */
+  async listAllShops() {
+    const items = await this.prisma.shop.findMany({
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        merchantId: true,
+        isOnline: true,
+        customDomain: true,
+        createdAt: true,
+        merchant: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            contactEmail: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { items };
+  }
+
   async findMyShop(merchantId: string) {
     const shop = await this.prisma.shop.findFirst({
       where: { merchantId },

@@ -50,7 +50,8 @@ export class OrderController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')
   async list(@CurrentUser() user: CurrentUserPayload, @Query() query: AdminOrderQueryDto) {
-    return this.orderService.listForAdmin(user.merchantId, {
+    const merchantId = user.roles.includes('SUPER_ADMIN') ? undefined : user.merchantId;
+    return this.orderService.listForAdmin(merchantId, {
       page: query.page ?? 1,
       pageSize: query.pageSize ?? 20,
       status: query.status,
@@ -63,6 +64,7 @@ export class OrderController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN', 'MERCHANT', 'STAFF')
   async detail(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string) {
-    return this.orderService.findOneForAdmin(user.merchantId, id);
+    const merchantId = user.roles.includes('SUPER_ADMIN') ? undefined : user.merchantId;
+    return this.orderService.findOneForAdmin(merchantId, id);
   }
 }

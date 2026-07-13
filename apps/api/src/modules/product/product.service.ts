@@ -145,11 +145,13 @@ export class ProductService {
     });
   }
 
-  async list(merchantId: string, query: ProductQueryDto) {
+  async list(merchantId: string | undefined, query: ProductQueryDto) {
     const where: Prisma.ProductWhereInput = {
-      merchantId,
       deletedAt: null,
     };
+    if (merchantId) {
+      where.merchantId = merchantId;
+    }
     if (query.keyword) {
       where.name = { contains: query.keyword };
     }
@@ -199,10 +201,10 @@ export class ProductService {
     };
   }
 
-  async findOne(merchantId: string, id: string) {
-    const product = await this.prisma.product.findFirst({
-      where: { id, merchantId, deletedAt: null },
-    });
+  async findOne(merchantId: string | undefined, id: string) {
+    const where: Prisma.ProductWhereInput = { id, deletedAt: null };
+    if (merchantId) where.merchantId = merchantId;
+    const product = await this.prisma.product.findFirst({ where });
     if (!product) {
       throw new NotFoundException('商品不存在');
     }

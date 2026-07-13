@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { get, post, put, del } from '@/api/http';
+import { useAuthStore } from '@/stores/auth';
 
 interface ProductStock {
   available: number;
@@ -29,8 +30,6 @@ interface ProductList {
   pageSize: number;
 }
 
-const DEFAULT_SHOP_ID = 'main'; // MVP：先硬编码 main 店铺，后续从店铺选择器取
-
 const loading = ref(false);
 const list = ref<Product[]>([]);
 const total = ref(0);
@@ -38,12 +37,26 @@ const page = ref(1);
 const pageSize = ref(20);
 const keyword = ref('');
 
+// 店铺列表（SUPER_ADMIN 创建商品时选择）
+interface ShopOption {
+  id: string;
+  code: string;
+  name: string;
+  merchantId: string;
+  isOnline: boolean;
+  merchant: { code: string; name: string; contactEmail: string };
+}
+const auth = useAuthStore();
+const isSuperAdmin = computed(() => auth.roles.includes('SUPER_ADMIN'));
+const shops = ref<ShopOption[]>([]);
+
 const dialogVisible = ref(false);
 const dialogMode = ref<'create' | 'edit'>('create');
 const formRef = ref<FormInstance>();
 const submitting = ref(false);
 const form = reactive({
   id: '',
+  shopId: '',
   name: '',
   description: '',
   price: 0,
@@ -54,6 +67,7 @@ const form = reactive({
 });
 
 const rules: FormRules<typeof form> = {
+  shopId: [{ required: true, message: '请选择店铺', trigger: 'change' }],
   name: [
     { required: true, message: '请输入商品名称', trigger: 'blur' },
     { max: 255, message: '名称最长 255', trigger: 'blur' },
@@ -83,10 +97,21 @@ async function fetchList(): Promise<void> {
   }
 }
 
+async function fetchShops(): Promise<void> {
+  if (!isSuperAdmin.value) return;
+  try {
+    const data = await get<{ items: ShopOption[] }>('/admin/shops');
+    shops.value = data.items;
+  } catch (err) {
+    console.error('加载店铺列表失败', err);
+  }
+}
+
 function openCreate(): void {
   dialogMode.value = 'create';
   Object.assign(form, {
     id: '',
+    shopId: shops.value[0]?.id ?? '',
     name: '',
     description: '',
     price: 0,
@@ -130,7 +155,12 @@ async function onSubmit(): Promise<void> {
       sort: form.sort,
     };
     if (dialogMode.value === 'create') {
-      await post('/admin/products', { ...payload, shopId: DEFAULT_SHOP_ID });
+      if (!form.shopId) {
+        ElMessage.error('请选择店铺');
+        submitting.value = false;
+        return;
+      }
+      await post('/admin/products', { ...payload, shopId: form.shopId });
       ElMessage.success('创建成功');
     } else {
       await put(`/admin/products/${form.id}`, payload);
@@ -169,7 +199,10 @@ function statusTag(s: Product['status']): { type: 'success' | 'info' | 'warning'
   return { type: 'info', text: '已下架' };
 }
 
-onMounted(fetchList);
+onMounted(() => {
+  fetchList();
+  fetchShops();
+});
 </script>
 
 <template>
@@ -237,6 +270,21 @@ onMounted(fetchList);
 
     <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新建商品' : '编辑商品'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item v-if="dialogMode === 'create' && isSuperAdmin" label="所属店铺" prop="shopId">
+          <el-select v-model="form.shopId" placeholder="选择店铺" style="width: 100%" filterable>
+            <el-option
+              v-for="shop in shops"
+              :key="shop.id"
+              :value="shop.id"
+              :label="`${shop.merchant.name} / ${shop.name}`"
+            >
+              <div style="display: flex; justify-content: space-between; gap: 12px">
+                <span>{{ shop.merchant.name }} / {{ shop.name }}</span>
+                <span style="color: #94a3b8; font-size: 12px">/{{ shop.code }}</span>
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="商品名" prop="name">
           <el-input v-model="form.name" maxlength="255" show-word-limit />
         </el-form-item>
