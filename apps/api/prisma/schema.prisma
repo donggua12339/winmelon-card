@@ -104,6 +104,10 @@ model Shop {
   announcement String?  @db.Text
   footerHtml  String?  @db.Text
   isOnline    Boolean  @default(true)
+  customDomain      String?  @unique @db.VarChar(255)  // 商户自定义域名（如 shop.example.com）
+  domainVerified    Boolean  @default(false)             // DNS TXT 是否已验证
+  domainVerifyToken String?  @db.VarChar(64)            // TXT 记录验证令牌
+  domainVerifiedAt  DateTime?                            // 验证通过时间
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -111,6 +115,7 @@ model Shop {
   orders      Order[]
 
   @@index([merchantId])
+  @@index([customDomain])
   @@map("shops")
 }
 

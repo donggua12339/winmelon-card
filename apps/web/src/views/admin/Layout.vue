@@ -66,6 +66,10 @@ async function onLogout(): Promise<void> {
           <span>🔑</span>
           <span>API Key</span>
         </el-menu-item>
+        <el-menu-item index="/admin/domain">
+          <span>🌐</span>
+          <span>自定义域名</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

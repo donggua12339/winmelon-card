@@ -8,6 +8,9 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware';
+import { ShopHostMiddleware } from './common/middlewares/shop-host.middleware';
+import { PrismaService } from './infrastructure/prisma/prisma.service';
+import type { Request, Response, NextFunction } from 'express';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import type { NestApplication } from '@nestjs/core';
 import { json, urlencoded } from 'express';
@@ -37,6 +40,10 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(cookieParser());
   app.use(RequestIdMiddleware);
+  // 商户自定义域名重写（必须在 json 解析前注册，因为它依赖原始 path）
+  const prismaService = app.get(PrismaService);
+  const shopHostMiddleware = new ShopHostMiddleware(prismaService);
+  app.use((req: Request, res: Response, next: NextFunction) => shopHostMiddleware.use(req, res, next));
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
 
