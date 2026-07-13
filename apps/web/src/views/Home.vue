@@ -85,17 +85,17 @@ import { RouterLink } from 'vue-router';
         <div class="recruit-steps">
           <div class="step">
             <span class="step-num">1</span>
-            <span>提交申请</span>
+            <span>填写资料</span>
           </div>
           <span class="step-arrow">→</span>
           <div class="step">
             <span class="step-num">2</span>
-            <span>平台审核（1-3 工作日）</span>
+            <span>邮箱验证</span>
           </div>
           <span class="step-arrow">→</span>
           <div class="step">
             <span class="step-num">3</span>
-            <span>收到初始密码登录</span>
+            <span>立即开通账号</span>
           </div>
           <span class="step-arrow">→</span>
           <div class="step">

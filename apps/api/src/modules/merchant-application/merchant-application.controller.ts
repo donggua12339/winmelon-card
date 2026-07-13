@@ -1,12 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { MerchantApplicationService } from './merchant-application.service';
-import { ApplyMerchantDto } from './dto/apply-merchant.dto';
+import { EmailVerificationService } from './email-verification.service';
+import { ApplyMerchantDto, SendCodeDto } from './dto/apply-merchant.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { ApiTags } from '@nestjs/swagger';
 import { IsString, MaxLength } from 'class-validator';
+import { Throttle } from '../../common/decorators/throttle.decorator';
 
 class RejectDto {
   @IsString()
@@ -17,11 +19,23 @@ class RejectDto {
 @ApiTags('merchant-application')
 @Controller()
 export class MerchantApplicationController {
-  constructor(private readonly service: MerchantApplicationService) {}
+  constructor(
+    private readonly service: MerchantApplicationService,
+    private readonly emailVerification: EmailVerificationService,
+  ) {}
 
-  /** 商户入驻申请（公开） */
+  /** 发送入驻验证码（公开，限流） */
+  @Post('merchant/apply/send-code')
+  @Public()
+  @Throttle({ perMin: 5 })
+  async sendCode(@Body() dto: SendCodeDto) {
+    return this.emailVerification.sendCode(dto.email);
+  }
+
+  /** 商户入驻申请（公开，需验证码） */
   @Post('merchant/apply')
   @Public()
+  @Throttle({ perMin: 5 })
   async apply(@Body() dto: ApplyMerchantDto) {
     return this.service.apply(dto);
   }
@@ -38,7 +52,7 @@ export class MerchantApplicationController {
     });
   }
 
-  /** 管理员：审核通过 */
+  /** 管理员：审核通过（兜底用，自动激活后一般用不到） */
   @Post('admin/merchant-applications/:id/approve')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')

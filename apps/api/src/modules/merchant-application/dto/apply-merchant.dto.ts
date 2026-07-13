@@ -25,4 +25,16 @@ export class ApplyMerchantDto {
   @IsString()
   @MaxLength(2000)
   businessScope?: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/, {
+    message: '验证码必须是 6 位数字',
+  })
+  verificationCode!: string;
+}
+
+export class SendCodeDto {
+  @IsEmail()
+  @MaxLength(255)
+  email!: string;
 }

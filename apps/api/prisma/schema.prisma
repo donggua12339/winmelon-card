@@ -390,6 +390,20 @@ model RiskRecord {
 // V2：商户入驻申请
 // ============================================================
 
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String   @db.VarChar(255)
+  code      String   @db.VarChar(8)   // 6 位数字
+  type      String   @db.VarChar(32)  // merchant_apply 等
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email, type])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
 model MerchantApplication {
   id              String   @id @default(uuid())
   contactName     String?  @db.VarChar(64)
