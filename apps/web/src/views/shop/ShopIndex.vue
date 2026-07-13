@@ -45,6 +45,7 @@ const orderForm = ref({
   buyerEmail: '',
   buyerContact: '',
   quantity: 1,
+  channel: 'mock' as 'mock' | 'usdt',
 });
 const submitting = ref(false);
 
@@ -72,6 +73,7 @@ function openOrder(product: Product): void {
     buyerEmail: '',
     buyerContact: '',
     quantity: 1,
+    channel: 'mock',
   };
   orderDialogVisible.value = true;
 }
@@ -103,7 +105,7 @@ async function onSubmitOrder(): Promise<void> {
 
     const pay = await post<CreatePaymentResult>('/payments', {
       orderId: order.orderId,
-      channel: 'mock',
+      channel: orderForm.value.channel,
     });
 
     window.location.href = pay.paymentUrl;
@@ -200,6 +202,14 @@ onMounted(() => {
       <div class="order-row">
         <label>手机</label>
         <el-input v-model="orderForm.buyerContact" placeholder="可选" />
+      </div>
+
+      <div class="order-row">
+        <label>支付方式</label>
+        <el-radio-group v-model="orderForm.channel">
+          <el-radio value="mock">模拟支付（测试）</el-radio>
+          <el-radio value="usdt">USDT（TRC20）</el-radio>
+        </el-radio-group>
       </div>
 
       <template #footer>

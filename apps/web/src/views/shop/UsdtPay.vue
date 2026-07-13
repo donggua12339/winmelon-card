@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import QRCode from 'qrcode';
 import { get } from '@/api/http';
 
 interface UsdtPaymentInfo {
@@ -19,6 +20,7 @@ const orderNo = (route.query.orderNo as string) ?? '';
 
 const info = ref<UsdtPaymentInfo | null>(null);
 const loading = ref(true);
+const qrCodeUrl = ref('');
 const remainingSec = ref(0);
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null);
 const countdownTimer = ref<ReturnType<typeof setInterval> | null>(null);
@@ -63,6 +65,13 @@ async function fetchInfo(): Promise<void> {
     const data = await get<UsdtPaymentInfo>(`/payment/usdt/info/${orderNo}`);
     info.value = data;
     updateCountdown();
+    // 生成 QR 码（TRC20 URI 标准）
+    const uri = `tron:${data.walletAddress}?amount=${data.usdtAmount}&token=USDT`;
+    qrCodeUrl.value = await QRCode.toDataURL(uri, {
+      width: 240,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
     if (data.status === 'SUCCESS') {
       stopPolling();
       ElMessage.success('支付确认成功');
@@ -140,6 +149,12 @@ onUnmounted(stopPolling);
           请使用支持 TRC20 的钱包转账，转账金额必须与下方显示完全一致（含小数位），否则无法自动匹配。
         </template>
       </el-alert>
+
+      <!-- QR 码 -->
+      <div v-if="qrCodeUrl" class="qr-section">
+        <img :src="qrCodeUrl" alt="USDT Wallet QR" class="qr-img" />
+        <div class="qr-hint">扫码转账（钱包需支持 TRC20）</div>
+      </div>
 
       <div v-loading="loading">
         <div class="status-section">
@@ -234,6 +249,26 @@ onUnmounted(stopPolling);
   font-size: 13px;
   color: var(--el-text-color-secondary);
   margin: 0;
+}
+
+.qr-section {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.qr-img {
+  width: 200px;
+  height: 200px;
+  display: block;
+  margin: 0 auto 8px;
+}
+
+.qr-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .status-section {
