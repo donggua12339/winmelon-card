@@ -25,6 +25,7 @@ const menuItems = [
   { path: '/merchant/orders', icon: '🛒', label: '订单管理' },
   { path: '/merchant/api-keys', icon: '🔐', label: 'API Key' },
   { path: '/merchant/domain', icon: '🌐', label: '自定义域名' },
+  { path: '/merchant/withdrawals', icon: '💰', label: '提现结算' },
 ];
 </script>
 
@@ -108,6 +109,7 @@ const titles: Record<string, string> = {
   '/merchant/orders': '订单管理',
   '/merchant/api-keys': 'API Key',
   '/merchant/domain': '自定义域名',
+  '/merchant/withdrawals': '提现结算',
   '/merchant/settings': '账户设置',
   '/merchant/change-password': '修改密码',
 };

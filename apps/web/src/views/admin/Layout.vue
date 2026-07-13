@@ -32,6 +32,7 @@ function getPageTitle(path: string): string {
     '/admin/merchant-applications': '商户审核',
     '/admin/api-keys': 'API Key',
     '/admin/domain': '自定义域名',
+    '/admin/withdrawals': '提现审核',
     '/admin/change-password': '修改密码',
   };
   for (const k of Object.keys(titles).sort((a, b) => b.length - a.length)) {
@@ -51,6 +52,7 @@ const menuItems = [
   { path: '/admin/merchant-applications', icon: '🏪', label: '商户审核' },
   { path: '/admin/api-keys', icon: '🔐', label: 'API Key' },
   { path: '/admin/domain', icon: '🌐', label: '自定义域名' },
+  { path: '/admin/withdrawals', icon: '💰', label: '提现审核' },
   { path: '/admin/risk', icon: '🛡️', label: '行为风控' },
   { path: '/admin/stats', icon: '📈', label: '高级统计' },
   { path: '/admin/audit-logs', icon: '📋', label: '审计日志' },

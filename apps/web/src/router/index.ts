@@ -84,6 +84,11 @@ const routes = [
         component: () => import('@/views/admin/ShopDomain.vue'),
       },
       {
+        path: 'withdrawals',
+        name: 'admin-withdrawals',
+        component: () => import('@/views/admin/Withdrawals.vue'),
+      },
+      {
         path: 'change-password',
         name: 'admin-change-password',
         component: () => import('@/views/admin/ChangePassword.vue'),
@@ -152,6 +157,11 @@ const routes = [
         path: 'domain',
         name: 'merchant-domain',
         component: () => import('@/views/admin/ShopDomain.vue'),
+      },
+      {
+        path: 'withdrawals',
+        name: 'merchant-withdrawals',
+        component: () => import('@/views/merchant/Withdrawals.vue'),
       },
       {
         path: 'change-password',
