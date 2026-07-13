@@ -144,4 +144,136 @@ export class MailService {
       text: `${opts.subject}\n\n${opts.message}`,
     });
   }
+
+  /** 订单创建（待支付）邮件 */
+  async sendOrderCreated(opts: {
+    to: string;
+    orderNo: string;
+    amount: string;
+    items: { productName: string; quantity: number; price: string }[];
+    payUrl: string;
+    expireAt: Date;
+  }): Promise<boolean> {
+    const itemsHtml = opts.items
+      .map(
+        (it) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e293b;">${it.productName}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:14px;color:#64748b;">× ${it.quantity}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;color:#1e293b;font-family:monospace;">¥${it.price}</td>
+        </tr>`,
+      )
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+    <div style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+      <div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:24px 32px;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">📋 订单已创建</h1>
+        <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">订单号：${opts.orderNo}</p>
+      </div>
+      <div style="padding:32px;">
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;">商品</th>
+              <th style="padding:10px 12px;text-align:center;font-size:12px;color:#64748b;">数量</th>
+              <th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;">单价</th>
+            </tr>
+          </thead>
+          <tbody>${itemsHtml}</tbody>
+          <tfoot>
+            <tr style="background:#fef3c7;">
+              <td colspan="2" style="padding:12px;font-size:14px;color:#92400e;font-weight:600;">合计</td>
+              <td style="padding:12px;text-align:right;font-size:18px;color:#dc2626;font-weight:700;font-family:monospace;">¥${opts.amount}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${opts.payUrl}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;">立即支付</a>
+        </div>
+        <p style="margin:16px 0 0;color:#64748b;font-size:13px;text-align:center;">
+          订单将于 <strong>${opts.expireAt.toLocaleString('zh-CN')}</strong> 过期，请尽快完成支付
+        </p>
+      </div>
+      <div style="background:#f8fafc;padding:16px 32px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#94a3b8;">WM 官方虚拟卡密交易平台</p>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+
+    return this.send({
+      to: opts.to,
+      subject: `[订单创建] ${opts.orderNo} - 合计 ¥${opts.amount}`,
+      html,
+      text: `订单 ${opts.orderNo} 已创建，合计 ¥${opts.amount}。请尽快支付：${opts.payUrl}`,
+    });
+  }
+
+  /** 商户入驻成功邮件（含初始密码） */
+  async sendMerchantWelcome(opts: {
+    to: string;
+    merchantName: string;
+    shopName: string;
+    shopCode: string;
+    loginUrl: string;
+    initialPassword: string;
+  }): Promise<boolean> {
+    const html = `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+    <div style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+      <div style="background:linear-gradient(135deg,#06b6d4,#0ea5e9);padding:32px;">
+        <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;">🎉 商户入驻成功</h1>
+        <p style="margin:12px 0 0;color:rgba(255,255,255,0.9);font-size:15px;">欢迎加入 WM 卡密平台！</p>
+      </div>
+      <div style="padding:32px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#1e293b;">您的商户账号已开通，登录信息如下：</p>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:24px 0;">
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+            <span style="color:#64748b;font-size:14px;">商户名称</span>
+            <span style="color:#1e293b;font-size:14px;font-weight:600;">${opts.merchantName}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+            <span style="color:#64748b;font-size:14px;">店铺名称</span>
+            <span style="color:#1e293b;font-size:14px;font-weight:600;">${opts.shopName}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+            <span style="color:#64748b;font-size:14px;">店铺路径</span>
+            <span style="color:#7c3aed;font-size:14px;font-family:monospace;">/shop/${opts.shopCode}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
+            <span style="color:#64748b;font-size:14px;">登录邮箱</span>
+            <span style="color:#1e293b;font-size:14px;">${opts.to}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;align-items:center;">
+            <span style="color:#64748b;font-size:14px;">初始密码</span>
+            <code style="background:#1e293b;color:#a5b4fc;padding:6px 12px;border-radius:4px;font-family:monospace;font-size:14px;">${opts.initialPassword}</code>
+          </div>
+        </div>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${opts.loginUrl}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#06b6d4,#0ea5e9);color:#fff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;">立即登录后台</a>
+        </div>
+        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:4px;margin-top:24px;">
+          <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">
+            ⚠️ 安全提示：登录后请立即修改初始密码，并开启邮箱通知接收订单动态。
+          </p>
+        </div>
+      </div>
+      <div style="background:#f8fafc;padding:16px 32px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#94a3b8;">WM 官方虚拟卡密交易平台</p>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+
+    return this.send({
+      to: opts.to,
+      subject: `【WM 卡密平台】欢迎入驻 - ${opts.merchantName}`,
+      html,
+      text: `欢迎入驻 WM 卡密平台！\n登录邮箱：${opts.to}\n初始密码：${opts.initialPassword}\n登录地址：${opts.loginUrl}\n请尽快登录并修改密码。`,
+    });
+  }
 }

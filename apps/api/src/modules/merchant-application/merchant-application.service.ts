@@ -1,20 +1,27 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { MailService } from '../../infrastructure/mail/mail.service';
 import { EmailVerificationService } from './email-verification.service';
 import { ApplyMerchantDto } from './dto/apply-merchant.dto';
 
 @Injectable()
 export class MerchantApplicationService {
   private readonly logger = new Logger(MerchantApplicationService.name);
+  private readonly publicBaseUrl: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly mail: MailService,
     private readonly emailVerification: EmailVerificationService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.publicBaseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:5173');
+  }
 
   /** 商户入驻申请：验证码通过后自动激活账号 */
   async apply(dto: ApplyMerchantDto & { verificationCode: string }) {
@@ -111,6 +118,16 @@ export class MerchantApplicationService {
     });
 
     this.logger.log(`商户自动激活（邮箱验证）: ${result.merchant.name} (${result.merchant.code})`);
+
+    // 发送入驻成功邮件（含初始密码）
+    await this.mail.sendMerchantWelcome({
+      to: dto.contactEmail,
+      merchantName: result.merchant.name,
+      shopName: result.shop.name,
+      shopCode: result.shop.code,
+      loginUrl: `${this.publicBaseUrl}/admin/login`,
+      initialPassword: initPassword,
+    });
 
     return {
       merchantId: result.merchant.id,

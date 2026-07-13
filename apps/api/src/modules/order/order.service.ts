@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
@@ -6,6 +7,7 @@ import { SnowflakeService } from '../../infrastructure/id/snowflake.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
 import { RiskControlService } from '../risk/risk-control.service';
+import { MailService } from '../../infrastructure/mail/mail.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -15,6 +17,7 @@ const ORDER_TTL_MS = ORDER_TTL_MINUTES * 60 * 1000;
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
+  private readonly publicBaseUrl: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -23,7 +26,11 @@ export class OrderService {
     private readonly auditLog: AuditLogService,
     private readonly crypto: AesGcmService,
     private readonly risk: RiskControlService,
-  ) {}
+    private readonly mail: MailService,
+    config: ConfigService,
+  ) {
+    this.publicBaseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:5173');
+  }
 
   /**
    * 下单：事务内 FOR UPDATE 锁卡 + 创建订单 + 关联卡密
@@ -162,6 +169,15 @@ export class OrderService {
         email: dto.buyerEmail,
         detail: `orderNo=${orderNo} amount=${result.totalAmount}`,
       });
+
+      // 发送订单创建邮件（异步，不阻塞响应）
+      this.sendOrderCreatedEmail(
+        result.order.id,
+        orderNo,
+        result.totalAmount.toString(),
+        dto.buyerEmail,
+        expireAt,
+      ).catch((err) => this.logger.error(`订单邮件发送失败：${(err as Error).message}`));
 
       return {
         orderId: result.order.id,
@@ -383,5 +399,33 @@ export class OrderService {
         this.logger.error(`订单 ${order.orderNo} 释放失败：${(err as Error).message}`);
       }
     }
+  }
+
+  /** 发送订单创建邮件（内部） */
+  private async sendOrderCreatedEmail(
+    orderId: string,
+    orderNo: string,
+    amount: string,
+    buyerEmail: string,
+    expireAt: Date,
+  ): Promise<void> {
+    const items = await this.prisma.orderItem.findMany({
+      where: { orderId },
+      select: { productName: true, quantity: true, unitPrice: true },
+    });
+    if (items.length === 0) return;
+
+    await this.mail.sendOrderCreated({
+      to: buyerEmail,
+      orderNo,
+      amount,
+      items: items.map((it) => ({
+        productName: it.productName,
+        quantity: it.quantity,
+        price: it.unitPrice.toString(),
+      })),
+      payUrl: `${this.publicBaseUrl}/pay?orderNo=${orderNo}`,
+      expireAt,
+    });
   }
 }
