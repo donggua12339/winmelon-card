@@ -109,7 +109,7 @@ onMounted(fetchProfile);
 
 <template>
   <div v-loading="!profile" class="merchant-settings">
-    <h2 class="page-title">账户设置</h2>
+    <p class="page-subtitle">基本资料、主题色、修改密码</p>
 
     <!-- 基本信息 -->
     <el-card v-if="profile" class="section">
@@ -180,17 +180,31 @@ onMounted(fetchProfile);
 
 <style scoped>
 .merchant-settings {
-  max-width: 900px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.page-title {
-  margin: 0 0 24px;
-  font-size: 22px;
-  font-weight: 700;
+.page-subtitle {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .section {
   margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.section :deep(.el-card__header) {
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 600;
+}
+
+.section :deep(.el-card__body) {
+  padding: 20px;
 }
 
 .theme-preview {
