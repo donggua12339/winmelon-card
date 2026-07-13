@@ -1,19 +1,9 @@
 import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class ApplyMerchantDto {
-  @IsString()
-  @MinLength(2)
-  @MaxLength(64)
-  contactName!: string;
-
   @IsEmail()
   @MaxLength(255)
   contactEmail!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  contactPhone?: string;
 
   @IsString()
   @MinLength(2)

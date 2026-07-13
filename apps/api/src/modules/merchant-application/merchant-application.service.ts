@@ -39,9 +39,7 @@ export class MerchantApplicationService {
 
     const app = await this.prisma.merchantApplication.create({
       data: {
-        contactName: dto.contactName,
         contactEmail: dto.contactEmail,
-        contactPhone: dto.contactPhone,
         merchantName: dto.merchantName,
         shopName: dto.shopName,
         shopCode: dto.shopCode,

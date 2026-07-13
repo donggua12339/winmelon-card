@@ -9,9 +9,7 @@ const formRef = ref<FormInstance>();
 const loading = ref(false);
 
 const form = reactive({
-  contactName: '',
   contactEmail: '',
-  contactPhone: '',
   merchantName: '',
   shopName: '',
   shopCode: '',
@@ -19,7 +17,6 @@ const form = reactive({
 });
 
 const rules: FormRules<typeof form> = {
-  contactName: [{ required: true, message: '请输入联系人姓名', trigger: 'blur' }],
   contactEmail: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
@@ -63,18 +60,10 @@ async function onSubmit(): Promise<void> {
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="onSubmit">
-        <h3 class="section-title">联系人信息</h3>
-        <el-form-item label="联系人姓名" prop="contactName">
-          <el-input v-model="form.contactName" placeholder="您的真实姓名" />
-        </el-form-item>
+        <h3 class="section-title">商户与店铺</h3>
         <el-form-item label="联系邮箱" prop="contactEmail">
           <el-input v-model="form.contactEmail" placeholder="用于接收审核结果和登录" />
         </el-form-item>
-        <el-form-item label="联系电话（可选）" prop="contactPhone">
-          <el-input v-model="form.contactPhone" placeholder="手机号" />
-        </el-form-item>
-
-        <h3 class="section-title">商户与店铺</h3>
         <el-form-item label="商户名称" prop="merchantName">
           <el-input v-model="form.merchantName" placeholder="如：XX 数码" />
         </el-form-item>

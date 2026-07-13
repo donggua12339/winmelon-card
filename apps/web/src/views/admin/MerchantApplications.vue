@@ -5,9 +5,7 @@ import { get, post } from '@/api/http';
 
 interface Application {
   id: string;
-  contactName: string;
   contactEmail: string;
-  contactPhone: string | null;
   merchantName: string;
   shopName: string;
   shopCode: string;
@@ -124,7 +122,6 @@ onMounted(fetchList);
       <el-table-column prop="merchantName" label="商户名称" min-width="120" />
       <el-table-column prop="shopName" label="店铺名称" min-width="120" />
       <el-table-column prop="shopCode" label="店铺码" width="120" />
-      <el-table-column prop="contactName" label="联系人" width="100" />
       <el-table-column prop="contactEmail" label="邮箱" min-width="180" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
