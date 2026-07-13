@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createTransport, type Transporter } from 'nodemailer';
+import { createTransport, type Transporter, type SendMailOptions } from 'nodemailer';
 
 export interface MailOptions {
   to: string;
@@ -18,7 +18,7 @@ export class MailService {
 
   constructor(config: ConfigService) {
     const host = config.get<string>('MAIL_HOST', 'smtp.qq.com');
-    const port = config.get<number>('MAIL_PORT', 465);
+    const port = Number(config.get<string>('MAIL_PORT', '465'));
     const user = config.get<string>('MAIL_USER');
     const pass = config.get<string>('MAIL_PASS');
     const fromName = config.get<string>('MAIL_FROM_NAME', 'WM 卡密平台');
@@ -27,13 +27,25 @@ export class MailService {
     this.from = `"${fromName}" <${user ?? 'no-reply@wm-card.local'}>`;
 
     if (this.enabled) {
-      this.transporter = createTransport({
+      const transportOptions = {
         host,
         port,
         secure: port === 465,
         auth: { user, pass },
-      });
-      this.logger.log(`邮件服务已配置：${user}@${host}:${port}`);
+        // 增加超时，避免 QQ SMTP 偶尔拒绝时无限挂起
+        connectionTimeout: 15_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
+        // QQ SMTP SSL 需要正确的 TLS 选项
+        tls: {
+          rejectUnauthorized: true,
+          minVersion: 'TLSv1.2' as const,
+        },
+        // 禁用连接池，每次发送新建连接（避免长连接被服务端断开）
+        pool: false,
+      } as unknown as SendMailOptions;
+      this.transporter = createTransport(transportOptions as never);
+      this.logger.log(`邮件服务已配置：${user}@${host}:${port} (secure=${port === 465})`);
     } else {
       this.logger.warn('邮件服务未配置（MAIL_USER/MAIL_PASS 缺失），邮件发送将被跳过');
     }
