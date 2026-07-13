@@ -1,9 +1,34 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+
+const auth = useAuthStore();
+const isLoggedIn = computed(() => auth.isAuthenticated);
+const isMerchant = computed(() => auth.roles.includes('MERCHANT'));
+const isSuperAdmin = computed(() => auth.roles.includes('SUPER_ADMIN'));
+const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '/merchant/dashboard'));
 </script>
 
 <template>
   <div class="home">
+    <!-- 顶部导航栏 -->
+    <nav class="topnav">
+      <div class="topnav-brand">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-text"><span class="text-gradient-aurora">WM</span> Card</span>
+      </div>
+      <div class="topnav-right">
+        <template v-if="isLoggedIn">
+          <RouterLink :to="dashboardUrl" class="topnav-btn topnav-btn-primary"> 进入工作台 → </RouterLink>
+        </template>
+        <template v-else>
+          <RouterLink to="/admin/login?as=merchant" class="topnav-btn topnav-btn-merchant"> 🏪 商户登录 </RouterLink>
+          <RouterLink to="/admin/login?as=admin" class="topnav-btn"> ⚙ 平台后台 </RouterLink>
+        </template>
+      </div>
+    </nav>
+
     <!-- Hero -->
     <section class="hero">
       <div class="hero-content">
@@ -124,8 +149,20 @@ import { RouterLink } from 'vue-router';
 
     <!-- 底部 -->
     <footer class="footer">
-      <RouterLink to="/admin/login">管理后台</RouterLink>
-      <span class="divider">·</span>
+      <template v-if="isLoggedIn">
+        <RouterLink :to="dashboardUrl" class="footer-link">进入工作台</RouterLink>
+        <span class="divider">·</span>
+        <span class="role-tag">
+          {{ isSuperAdmin ? '平台管理员' : isMerchant ? '商户' : '用户' }}
+        </span>
+        <span class="divider">·</span>
+      </template>
+      <template v-else>
+        <RouterLink to="/admin/login?as=merchant" class="footer-link">🏪 商户登录</RouterLink>
+        <span class="divider">·</span>
+        <RouterLink to="/admin/login?as=admin" class="footer-link">⚙ 平台后台</RouterLink>
+        <span class="divider">·</span>
+      </template>
       <a href="https://github.com" target="_blank">GitHub</a>
       <span class="divider">·</span>
       <span>WM Card © 2026</span>
@@ -138,6 +175,79 @@ import { RouterLink } from 'vue-router';
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* 顶部导航 */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 32px;
+  background: rgba(15, 17, 23, 0.7);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--wm-border-glass);
+}
+
+.topnav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.topnav-brand .brand-icon {
+  font-size: 22px;
+}
+
+.topnav-right {
+  display: flex;
+  gap: 10px;
+}
+
+.topnav-btn {
+  padding: 8px 16px;
+  border-radius: var(--wm-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 1px solid var(--wm-border-glass);
+  color: var(--wm-text-secondary);
+  background: var(--wm-glass-bg);
+}
+
+.topnav-btn:hover {
+  color: var(--wm-text-primary);
+  border-color: var(--wm-border-glass-hover);
+  background: var(--wm-glass-bg-hover);
+}
+
+.topnav-btn-merchant {
+  color: #06b6d4;
+  border-color: rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.1);
+}
+
+.topnav-btn-merchant:hover {
+  background: rgba(6, 182, 212, 0.2);
+  color: #06b6d4;
+}
+
+.topnav-btn-primary {
+  background: var(--wm-gradient-primary);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.topnav-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+  color: white;
 }
 
 /* Hero */
@@ -474,5 +584,27 @@ import { RouterLink } from 'vue-router';
 .divider {
   margin: 0 8px;
   opacity: 0.5;
+}
+
+.footer-link {
+  color: var(--wm-text-secondary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  padding: 0 4px;
+}
+
+.footer-link:hover {
+  color: var(--wm-accent-cyan);
+}
+
+.role-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  background: var(--wm-gradient-primary);
+  color: white;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 </style>

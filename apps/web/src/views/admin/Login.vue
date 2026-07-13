@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { FormInstance, FormRules } from 'element-plus';
@@ -14,6 +14,24 @@ const form = reactive({
   username: '',
   password: '',
 });
+
+// 根据 ?as=merchant / ?as=admin 决定标题
+const mode = computed<'admin' | 'merchant' | 'default'>(() => {
+  const as = (route.query.as as string) ?? 'default';
+  if (as === 'merchant' || as === 'admin') return as;
+  return 'default';
+});
+const titleText = computed(() => {
+  if (mode.value === 'merchant') return '商户登录';
+  if (mode.value === 'admin') return '平台后台登录';
+  return '管理后台';
+});
+const subText = computed(() => {
+  if (mode.value === 'merchant') return '登录后进入商户工作台';
+  if (mode.value === 'admin') return '登录后进入平台管理后台';
+  return '';
+});
+const brandIcon = computed(() => (mode.value === 'merchant' ? '🏪' : '⚡'));
 
 const rules: FormRules<typeof form> = {
   username: [
@@ -43,12 +61,18 @@ async function onSubmit(): Promise<void> {
 
   loading.value = true;
   try {
-    await auth.login(form.username, form.password);
-    const redirect = (route.query.redirect as string) || '/admin/dashboard';
-    router.replace(redirect);
+    const result = await auth.login(form.username, form.password);
+    // 优先用 URL 中的 redirect，否则用后端返回的 defaultRedirect
+    const queryRedirect = route.query.redirect as string | undefined;
+    const target = queryRedirect || result.defaultRedirect || auth.defaultRedirect;
+    router.replace(target);
   } finally {
     loading.value = false;
   }
+}
+
+function switchMode(target: 'admin' | 'merchant'): void {
+  router.replace({ path: '/admin/login', query: { as: target } });
 }
 </script>
 
@@ -56,9 +80,18 @@ async function onSubmit(): Promise<void> {
   <div class="login-page">
     <div class="glass login-card">
       <div class="brand">
-        <div class="brand-icon">⚡</div>
+        <div class="brand-icon">{{ brandIcon }}</div>
         <h1 class="brand-title"><span class="text-gradient-aurora">WM</span> Card</h1>
-        <p class="brand-subtitle">管理后台</p>
+        <p class="brand-subtitle">{{ titleText }}</p>
+        <p v-if="subText" class="brand-hint">{{ subText }}</p>
+      </div>
+
+      <!-- 模式切换 -->
+      <div class="mode-switch">
+        <button :class="['mode-btn', { active: mode === 'admin' || mode === 'default' }]" @click="switchMode('admin')">
+          平台后台
+        </button>
+        <button :class="['mode-btn', { active: mode === 'merchant' }]" @click="switchMode('merchant')">商户登录</button>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="onSubmit">
@@ -135,6 +168,44 @@ async function onSubmit(): Promise<void> {
   margin: 0;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.brand-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--wm-text-secondary);
+}
+
+.mode-switch {
+  display: flex;
+  background: var(--wm-glass-bg);
+  border: 1px solid var(--wm-border-glass);
+  border-radius: var(--wm-radius-md);
+  padding: 4px;
+  margin: 0 0 24px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--wm-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--wm-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: var(--wm-text-primary);
+}
+
+.mode-btn.active {
+  background: var(--wm-gradient-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 .submit-btn {
