@@ -11,6 +11,10 @@ async function onLogout(): Promise<void> {
   await auth.logout();
   router.replace('/admin/login');
 }
+
+function onChangePassword(): void {
+  router.push('/admin/change-password');
+}
 </script>
 
 <template>
@@ -80,11 +84,23 @@ async function onLogout(): Promise<void> {
           <RouterLink to="/" class="back">← 返回首页</RouterLink>
         </div>
         <div class="right">
-          <span class="user-info">
-            <span class="user-avatar">{{ auth.user?.username?.[0]?.toUpperCase() ?? 'A' }}</span>
-            <span class="user-name">{{ auth.user?.username ?? '-' }}</span>
-          </span>
-          <el-button link type="danger" @click="onLogout">退出</el-button>
+          <el-dropdown trigger="click" @command="(cmd: string) => (cmd === 'logout' ? onLogout() : onChangePassword())">
+            <span class="user-info user-info-clickable">
+              <span class="user-avatar">{{ auth.user?.username?.[0]?.toUpperCase() ?? 'A' }}</span>
+              <span class="user-name">{{ auth.user?.username ?? '-' }}</span>
+              <span class="user-caret">▾</span>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="change-password">
+                  <span>🔑 修改密码</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
+                  <span style="color: #f56c6c">退出登录</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
       <el-main class="main">
@@ -189,6 +205,22 @@ async function onLogout(): Promise<void> {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.user-info-clickable {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--wm-radius-md);
+  transition: background 0.2s ease;
+}
+
+.user-info-clickable:hover {
+  background: var(--wm-glass-bg);
+}
+
+.user-caret {
+  font-size: 10px;
+  color: var(--wm-text-tertiary);
 }
 
 .user-avatar {

@@ -13,6 +13,10 @@ async function onLogout(): Promise<void> {
   await auth.logout();
   router.replace('/admin/login');
 }
+
+function onChangePassword(): void {
+  router.push('/merchant/change-password');
+}
 </script>
 
 <template>
@@ -27,8 +31,22 @@ async function onLogout(): Promise<void> {
       </div>
       <div class="topbar-right">
         <el-button size="small" @click="router.push('/')">查看店铺</el-button>
-        <span class="user-info">{{ auth.user?.username }}</span>
-        <el-button link size="small" @click="onLogout">退出</el-button>
+        <el-dropdown trigger="click" @command="(cmd: string) => (cmd === 'logout' ? onLogout() : onChangePassword())">
+          <span class="user-info user-info-clickable">
+            {{ auth.user?.username }}
+            <span class="user-caret">▾</span>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="change-password">
+                <span>🔑 修改密码</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <span style="color: #f56c6c">退出登录</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </header>
 
@@ -59,6 +77,10 @@ async function onLogout(): Promise<void> {
           <el-menu-item index="/merchant/domain">
             <span>🌐</span>
             <span>自定义域名</span>
+          </el-menu-item>
+          <el-menu-item index="/merchant/change-password">
+            <span>🔑</span>
+            <span>修改密码</span>
           </el-menu-item>
           <el-menu-item index="/merchant/settings">
             <span>⚙️</span>
@@ -130,6 +152,22 @@ async function onLogout(): Promise<void> {
   font-size: 13px;
   opacity: 0.9;
   padding: 0 8px;
+}
+
+.user-info-clickable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-info-clickable:hover {
+  opacity: 1;
+}
+
+.user-caret {
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 .container {

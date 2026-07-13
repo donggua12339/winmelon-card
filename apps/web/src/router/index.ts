@@ -79,6 +79,11 @@ const routes = [
         component: () => import('@/views/admin/ShopDomain.vue'),
       },
       {
+        path: 'change-password',
+        name: 'admin-change-password',
+        component: () => import('@/views/admin/ChangePassword.vue'),
+      },
+      {
         path: 'audit-logs',
         name: 'admin-audit-logs',
         component: () => import('@/views/admin/AuditLog.vue'),
@@ -142,6 +147,11 @@ const routes = [
         path: 'domain',
         name: 'merchant-domain',
         component: () => import('@/views/admin/ShopDomain.vue'),
+      },
+      {
+        path: 'change-password',
+        name: 'merchant-change-password',
+        component: () => import('@/views/admin/ChangePassword.vue'),
       },
       {
         path: 'settings',
