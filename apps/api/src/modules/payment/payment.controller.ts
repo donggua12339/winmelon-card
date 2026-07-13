@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards, HttpCode } from '@nestjs/common';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
+import { UsdtService } from './usdt.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { Throttle } from '../../common/decorators/throttle.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -12,7 +13,7 @@ class CreatePaymentDto {
   @IsString()
   orderId!: string;
 
-  @IsIn(['epay', 'mock'])
+  @IsIn(['epay', 'mock', 'usdt'])
   channel!: string;
 }
 
@@ -25,7 +26,10 @@ class UpdateChannelDto {
 @ApiTags('payment')
 @Controller()
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly usdtService: UsdtService,
+  ) {}
 
   /** 买家发起支付 */
   @Post('payments')
@@ -68,6 +72,13 @@ export class PaymentController {
   async mockPay(@Body() body: { orderNo: string }) {
     await this.paymentService.triggerMockPay(body.orderNo);
     return { ok: true };
+  }
+
+  /** USDT 支付信息：钱包地址、金额、过期时间 */
+  @Get('payment/usdt/info/:orderNo')
+  @Public()
+  async usdtInfo(@Param('orderNo') orderNo: string) {
+    return this.usdtService.getPaymentInfo(orderNo);
   }
 
   /** 后台：通道列表 */

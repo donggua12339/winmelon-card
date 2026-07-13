@@ -41,6 +41,12 @@ export interface CreatePaymentParams {
 export interface CreatePaymentResult {
   paymentUrl: string;
   tradeNo?: string;
+  /** 通道特定元数据（如 USDT 的钱包地址、金额、过期时间） */
+  metadata?: {
+    usdtWallet?: string;
+    usdtAmount?: string;
+    expiresAt?: Date;
+  };
 }
 
 export interface NotifyResult {

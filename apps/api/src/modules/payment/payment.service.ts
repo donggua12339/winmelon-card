@@ -7,6 +7,7 @@ import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { EpayAdapter } from './adapters/epay.adapter';
 import { MockAdapter } from './adapters/mock.adapter';
+import { UsdtAdapter } from './adapters/usdt.adapter';
 import type { PaymentAdapter, NotifyResult } from './payment-adapter.interface';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
 
@@ -26,12 +27,14 @@ export class PaymentService {
     private readonly eventEmitter: EventEmitter2,
     private readonly epayAdapter: EpayAdapter,
     private readonly mockAdapter: MockAdapter,
+    private readonly usdtAdapter: UsdtAdapter,
     config: ConfigService,
   ) {
     this.baseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:3000');
     this.adapters = new Map<string, PaymentAdapter>([
       [epayAdapter.code, epayAdapter],
       [mockAdapter.code, mockAdapter],
+      [usdtAdapter.code, usdtAdapter],
     ]);
   }
 
@@ -86,6 +89,9 @@ export class PaymentService {
         tradeNo: result.tradeNo,
         amount: order.totalAmount,
         status: 'PENDING',
+        usdtWallet: result.metadata?.usdtWallet,
+        usdtAmount: result.metadata?.usdtAmount,
+        expiresAt: result.metadata?.expiresAt,
       },
     });
 

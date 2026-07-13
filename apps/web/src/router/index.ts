@@ -28,6 +28,11 @@ const routes = [
     component: () => import('@/views/shop/MockPay.vue'),
   },
   {
+    path: '/payment/usdt',
+    name: 'usdt-pay',
+    component: () => import('@/views/shop/UsdtPay.vue'),
+  },
+  {
     path: '/admin/login',
     name: 'admin-login',
     component: () => import('@/views/admin/Login.vue'),

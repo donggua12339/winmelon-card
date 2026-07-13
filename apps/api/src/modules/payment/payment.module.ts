@@ -3,10 +3,12 @@ import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
 import { EpayAdapter } from './adapters/epay.adapter';
 import { MockAdapter } from './adapters/mock.adapter';
+import { UsdtAdapter } from './adapters/usdt.adapter';
+import { UsdtService } from './usdt.service';
 
 @Module({
   controllers: [PaymentController],
-  providers: [PaymentService, EpayAdapter, MockAdapter],
+  providers: [PaymentService, EpayAdapter, MockAdapter, UsdtAdapter, UsdtService],
   exports: [PaymentService],
 })
 export class PaymentModule {}
