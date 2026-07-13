@@ -122,6 +122,8 @@ function switchMode(target: 'admin' | 'merchant'): void {
       </el-form>
 
       <div class="footer">
+        <RouterLink to="/forgot-password" class="forgot-link">忘记密码？</RouterLink>
+        <span class="divider">·</span>
         <RouterLink to="/" class="back">← 返回首页</RouterLink>
       </div>
     </div>
@@ -220,6 +222,26 @@ function switchMode(target: 'admin' | 'merchant'): void {
 .footer {
   text-align: center;
   margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.divider {
+  color: var(--wm-text-tertiary);
+  opacity: 0.5;
+}
+
+.forgot-link {
+  color: var(--wm-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s ease;
+}
+
+.forgot-link:hover {
+  color: var(--wm-accent-cyan, #06b6d4);
 }
 
 .back {
