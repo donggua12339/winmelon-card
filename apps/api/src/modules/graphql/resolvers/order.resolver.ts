@@ -12,7 +12,7 @@ export class OrderResolver {
   @Query(() => [OrderType], { description: '当前登录商户的订单列表' })
   @UseGuards(GqlAuthGuard)
   async myOrders(
-    @Context() ctx: { req: Record<string, unknown> },
+    @Context() ctx: { req: { user?: { userId?: string; merchantId?: string } } },
     @Args('limit', { type: () => Number, defaultValue: 20 }) limit: number,
   ): Promise<OrderType[]> {
     const merchantId = ctx.req.user?.merchantId;
