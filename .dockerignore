@@ -1,0 +1,67 @@
+# ============================================================
+# Docker build context 排除文件
+# 避免敏感文件 + 无用大文件进入构建上下文
+# ============================================================
+
+# Git / 元数据
+.git/
+.gitignore
+.github/
+.husky/
+.lintstagedrc.json
+
+# 依赖（容器内 npm install 装）
+node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
+
+# 构建产物（容器内 nest build 生成）
+apps/api/dist/
+apps/web/dist/
+apps/api/prebuilt-prisma/
+packages/*/dist/
+
+# TypeScript 缓存
+*.tsbuildinfo
+.nest-cache/
+
+# 环境与密钥
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 文档与日志
+*.md
+!apps/api/README.md
+!apps/web/README.md
+logs/
+*.log
+
+# 数据库与备份
+*.sqlite
+*.db
+backups/
+*.sql.gz
+
+# 上传与缓存
+uploads/
+.cache/
+*.pid
+tmp/
+
+# 测试
+coverage/
+*.lcov
+test/
+
+# Docker
+.docker-data/

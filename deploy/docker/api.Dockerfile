@@ -1,43 +1,68 @@
 # ============================================================
-# WM API - 多阶段构建
-# Stage 1: 依赖安装 + 编译
-# Stage 2: 仅产物 + node 用户运行
+# WM API - 多阶段构建（加固版）
+# Stage 1: builder - 安装依赖 + 编译 + 校验产物
+# Stage 2: runner  - 仅复制生产必要文件
 # ============================================================
 FROM node:20-bookworm AS builder
 WORKDIR /app
 
-# Prisma 需要 openssl + ca-certificates
+# Prisma 运行时需要 openssl + ca-certificates
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# 复制 workspace 配置
+# -------- 1. 复制 workspace 依赖清单（最大化缓存命中）--------
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-# 安装依赖（必须用 development 才能装 nest CLI / typescript）
+# -------- 2. 安装依赖（含 nest CLI 等 dev 工具）--------
 ENV NODE_ENV=development
-# --ignore-scripts 防止 @prisma/client postinstall 覆盖我们 prebuilt 的 .prisma
-RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps --ignore-scripts
+RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps
 
-# 复制源码
+# -------- 3. 复制全部源码 --------
+# 注意：prebuilt-prisma/ 已加入 .gitignore，本地不入库
+# Docker build context 由 .dockerignore 控制（如果有）
 COPY . .
 
-# 使用预生成的 Prisma Client（绕过 builder 中的 openssl 检测 bug）
-COPY apps/api/prebuilt-prisma/.prisma /app/node_modules/.prisma
-# swagger 8.1.1（兼容 nestjs 10，npm ci 在 builder 容器里没自动装）
-COPY apps/api/prebuilt-prisma/node_modules/@nestjs/swagger /app/node_modules/@nestjs/swagger
+# -------- 4. 容器内生成 Prisma Client --------
+# 之前依赖 prebuilt-prisma 是为了规避"容器内 prisma generate 有 bug"
+# 新方案：直接 generate，更可靠（无需提交 .prisma 到 git）
+RUN cd /app/apps/api && \
+    npx --no-install prisma generate --no-hints 2>&1 | tail -3
 
-# 构建
+# -------- 5. 编译 shared-types + api --------
 RUN npm --workspace @wm-card/shared-types run build
 RUN npm --workspace @wm-card/api run build
 
-# 构建完成后裁剪 dev 依赖，减小生产镜像体积 + 减少攻击面
+# -------- 6. POST-BUILD 校验：dist 必须包含关键新模块 + .prisma 完整 --------
+# 这是为了防止历史踩坑（dist 缺新模块 / Prisma enum 缺失但 build 不报错）
+RUN set -e; \
+    echo "--- post-build validation ---"; \
+    for module in article page-view ticket invite notification merchant-payment-channel; do \
+        if [ ! -f "/app/apps/api/dist/modules/$module/$module.controller.js" ]; then \
+            echo "FATAL: dist/modules/$module/$module.controller.js missing"; \
+            ls /app/apps/api/dist/modules/ 2>&1 | head -30; \
+            exit 1; \
+        else \
+            echo "  ✓ dist/$module OK"; \
+        fi; \
+    done; \
+    echo "--- main.js sanity ---"; \
+    grep -q 'new ShopHostMiddleware\|new shop_host_middleware' /app/apps/api/dist/main.js || \
+        (echo "FATAL: main.js looks outdated" && exit 1); \
+    echo "  ✓ main.js OK"; \
+    echo "--- prisma sanity ---"; \
+    test -f /app/node_modules/.prisma/client/index.js && \
+        grep -q 'ArticleType' /app/node_modules/.prisma/client/index.js || \
+        (echo "FATAL: .prisma missing ArticleType" && exit 1); \
+    echo "  ✓ .prisma OK"
+
+# -------- 7. 裁剪 dev 依赖，减小生产镜像 --------
 # @prisma/client 是 dependencies，prisma engine binaries 在 .prisma 目录，不受影响
 RUN npm prune --omit=dev --legacy-peer-deps
 
 # ============================================================
-# Stage 2: 生产镜像
+# Stage 2: 生产镜像（最小化）
 # ============================================================
 FROM node:20-bookworm AS runner
 WORKDIR /app
@@ -51,13 +76,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 RUN groupadd --gid 1001 nodejs && \
     useradd --uid 1001 --gid nodejs --shell /bin/false --create-home nodejs
 
-# 仅复制生产必要文件（npm workspaces 的 node_modules 在根目录）
-COPY --from=builder /app/package.json /app/package-lock.json* ./
-COPY --from=builder /app/apps/api/package.json ./apps/api/
+# 复制生产必要文件（按大小从大到小，最大化层缓存命中）
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/packages/shared-types ./packages/shared-types
+COPY --from=builder /app/package.json /app/package-lock.json* ./
 
 # 设置权限
 RUN chown -R nodejs:nodejs /app
