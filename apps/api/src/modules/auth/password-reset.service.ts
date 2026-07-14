@@ -1,6 +1,4 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
@@ -19,19 +17,13 @@ const VERIFICATION_TYPE = 'reset_password';
 @Injectable()
 export class PasswordResetService {
   private readonly logger = new Logger(PasswordResetService.name);
-  private readonly jwtSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly mail: MailService,
     private readonly auditLog: AuditLogService,
-    jwt: JwtService,
-    config: ConfigService,
-  ) {
-    this.jwtSecret = config.get<string>('JWT_SECRET') ?? 'change-me';
-    void jwt; // 占位防止未用警告
-  }
+  ) {}
 
   /**
    * 步骤 1：发邮箱验证码

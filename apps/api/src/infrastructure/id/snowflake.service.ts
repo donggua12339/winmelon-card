@@ -53,8 +53,12 @@ export class SnowflakeService implements OnModuleInit {
     if (now === this.lastTimestamp) {
       this.sequence = (this.sequence + 1n) & SnowflakeService.MAX_SEQUENCE;
       if (this.sequence === 0n) {
+        // spin wait（带超时保护，避免时钟卡住时死循环）
+        const spinStart = Date.now();
         while (BigInt(Date.now()) <= this.lastTimestamp) {
-          // spin wait
+          if (Date.now() - spinStart > 5000) {
+            throw new Error('Snowflake: 时钟长时间停滞，请检查系统时间');
+          }
         }
         now = BigInt(Date.now());
         this.lastTimestamp = now;

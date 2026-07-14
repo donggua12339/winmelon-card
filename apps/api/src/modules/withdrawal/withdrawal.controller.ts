@@ -74,7 +74,7 @@ export class WithdrawalController {
     if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.listForMerchant(user.merchantId, {
       page: page ? Number(page) : 1,
-      pageSize: pageSize ? Number(pageSize) : 20,
+      pageSize: pageSize ? Math.min(Number(pageSize) || 20, 100) : 20,
       status,
     });
   }
@@ -92,7 +92,7 @@ export class WithdrawalController {
   ) {
     return this.service.listForAdmin({
       page: page ? Number(page) : 1,
-      pageSize: pageSize ? Number(pageSize) : 20,
+      pageSize: pageSize ? Math.min(Number(pageSize) || 20, 100) : 20,
       status,
       keyword,
     });

@@ -2,7 +2,9 @@
 
 > 开源发卡网 / 虚拟商品自动发卡平台
 
-[![CI](https://github.com/OWNER/wm-card/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+<!-- CI badge 待接入 GitHub 仓库后启用 -->
+<!-- ![CI](https://github.com/OWNER/wm-card/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml) -->
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ## 项目简介

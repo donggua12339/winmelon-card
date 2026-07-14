@@ -6,6 +6,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { Throttle } from '../../common/decorators/throttle.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { CurrentUser, type CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -101,7 +102,17 @@ export class PaymentController {
   @Put('admin/payment-channels/:code')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
-  async updateChannel(@Param('code') code: string, @Body() dto: UpdateChannelDto) {
-    return this.paymentService.updateChannel(code, dto);
+  async updateChannel(
+    @Param('code') code: string,
+    @Body() dto: UpdateChannelDto,
+    @CurrentUser() user: CurrentUserPayload,
+    @Req() req: Request,
+  ) {
+    return this.paymentService.updateChannel(code, dto, {
+      userId: user.userId,
+      userName: user.username,
+      ip: req.ip,
+      ua: req.get('user-agent'),
+    });
   }
 }

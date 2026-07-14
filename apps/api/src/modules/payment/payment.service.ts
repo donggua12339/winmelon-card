@@ -362,20 +362,39 @@ export class PaymentService implements OnModuleInit {
     };
   }
 
-  async updateChannel(code: string, data: { name?: string; isAvailable?: boolean; config?: Record<string, unknown> }) {
-    const channel = await this.prisma.paymentChannel.findUnique({ where: { code } });
-    if (!channel) throw new NotFoundException('通道不存在');
+  async updateChannel(
+    code: string,
+    data: { name?: string; isAvailable?: boolean; config?: Record<string, unknown> },
+    ctx?: { userId?: string; userName?: string; ip?: string; ua?: string },
+  ) {
+    const before = await this.prisma.paymentChannel.findUnique({ where: { code } });
+    if (!before) throw new NotFoundException('通道不存在');
 
     const update: { name?: string; isAvailable?: boolean; config?: string } = {};
     if (data.name !== undefined) update.name = data.name;
     if (data.isAvailable !== undefined) update.isAvailable = data.isAvailable;
     if (data.config !== undefined) update.config = this.encryptConfig(data.config);
 
-    return this.prisma.paymentChannel.update({
+    const after = await this.prisma.paymentChannel.update({
       where: { code },
       data: update,
       select: { code: true, name: true, isAvailable: true, updatedAt: true },
     });
+
+    // 审计日志
+    await this.auditLog.record({
+      actorId: ctx?.userId,
+      actorName: ctx?.userName,
+      action: 'payment_channel.update',
+      resourceType: 'payment_channel',
+      resourceId: code,
+      beforeData: { name: before.name, isAvailable: before.isAvailable, hasConfig: !!before.config },
+      afterData: { name: after.name, isAvailable: after.isAvailable, hasConfig: data.config !== undefined },
+      ip: ctx?.ip,
+      userAgent: ctx?.ua,
+    });
+
+    return after;
   }
 
   // ====== 私有方法 ======
