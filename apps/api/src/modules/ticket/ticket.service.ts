@@ -5,6 +5,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { SnowflakeService } from '../../infrastructure/id/snowflake.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
+import { NotificationTriggerService } from '../notification/notification-trigger.service';
 
 const AUTO_REFUND_HOURS = 24; // 24h 自动退款
 const MERCHANT_UNRESPONSED_FREEZE_THRESHOLD = 5; // 商户 5 次未响应自动冻结
@@ -26,6 +27,7 @@ export class TicketService {
     private readonly auditLog: AuditLogService,
     private readonly snowflake: SnowflakeService,
     private readonly mail: MailService,
+    private readonly trigger: NotificationTriggerService,
   ) {}
 
   // ============== 买家侧 ==============
@@ -117,6 +119,9 @@ export class TicketService {
       userAgent: ctx.ua,
     });
 
+    // 触发站内信 + 邮件通知商户
+    void this.trigger.notifyTicketCreated(ticket.id);
+
     return { ticketNo, id: ticket.id };
   }
 
@@ -168,6 +173,9 @@ export class TicketService {
         },
       });
     });
+
+    // 通知商户：买家回复了
+    void this.trigger.notifyTicketReply(ticket.id, 'buyer');
 
     return { ok: true };
   }
@@ -251,8 +259,6 @@ export class TicketService {
 
     return { ok: true };
   }
-
-  // ============== 平台侧 ==============
 
   async listForAdmin(query: { page: number; pageSize: number; status?: string }) {
     const where: Prisma.TicketWhereInput = {};

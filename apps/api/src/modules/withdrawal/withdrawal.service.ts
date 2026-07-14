@@ -4,6 +4,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { ConfigService } from '@nestjs/config';
+import { NotificationTriggerService } from '../notification/notification-trigger.service';
 import { WithdrawalMethod, WithdrawalStatus, Prisma } from '@prisma/client';
 
 /** 平台全局提现配置（可改为 system_configs 动态配置） */
@@ -28,6 +29,7 @@ export class WithdrawalService {
     private readonly mail: MailService,
     private readonly auditLog: AuditLogService,
     private readonly config: ConfigService,
+    private readonly trigger: NotificationTriggerService,
   ) {}
 
   /** 获取平台提现配置（可后续接入 system_configs 动态配置） */
@@ -124,6 +126,9 @@ export class WithdrawalService {
 
     this.logger.log(`商户申请提现: merchant=${merchantId} amount=${payload.amount} fee=${fee}`);
 
+    // 触发站内信：通知平台管理员审核
+    void this.trigger.notifyWithdrawalPending(withdrawal.id);
+
     return {
       id: withdrawal.id,
       amount: Number(withdrawal.amount),
@@ -184,6 +189,9 @@ export class WithdrawalService {
       ip: adminCtx.ip,
       userAgent: adminCtx.ua,
     });
+
+    // 通知商户：提现已审核通过
+    void this.trigger.notifyWithdrawalResult(withdrawalId, 'APPROVING');
 
     return { ok: true };
   }
@@ -255,6 +263,9 @@ export class WithdrawalService {
       userAgent: adminCtx.ua,
     });
 
+    // 通知商户：提现被拒绝
+    void this.trigger.notifyWithdrawalResult(withdrawalId, 'REJECTED', reason);
+
     return { ok: true };
   }
 
@@ -310,6 +321,9 @@ export class WithdrawalService {
     });
 
     this.logger.log(`提现已打款: id=${withdrawalId} transferRef=${transferRef} admin=${adminCtx.username}`);
+
+    // 通知商户：提现已打款
+    void this.trigger.notifyWithdrawalResult(withdrawalId, 'PAID');
 
     return { ok: true };
   }

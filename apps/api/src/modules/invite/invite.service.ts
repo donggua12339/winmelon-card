@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { NotificationTriggerService } from '../notification/notification-trigger.service';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
 import { randomBytes } from 'crypto';
 
@@ -17,6 +18,7 @@ export class InviteService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly trigger: NotificationTriggerService,
   ) {}
 
   // ============== 邀请码管理 ==============
@@ -190,7 +192,7 @@ export class InviteService {
         orderNo: true,
         totalAmount: true,
         usedInviteCode: true,
-        shop: { select: { merchantId: true } },
+        shop: { select: { merchantId: true, merchant: { select: { name: true } } } },
       },
     });
     if (!order || !order.usedInviteCode) return;
@@ -266,6 +268,9 @@ export class InviteService {
     });
 
     this.logger.log(`返佣结算成功: orderNo=${order.orderNo} inviter=${inviterMerchantId} amount=${amount}`);
+
+    // 触发站内信：通知邀请人获得返佣
+    void this.trigger.notifyCommissionEarned(inviterMerchantId, amount, order.shop.merchant.name);
   }
 
   // ============== 定时任务：订单退款时冲正返佣 ==============
