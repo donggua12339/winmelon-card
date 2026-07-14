@@ -31,10 +31,15 @@ RUN cd /app/apps/api && \
     npx --no-install prisma generate --no-hints 2>&1 | tail -3
 
 # -------- 5. 编译 shared-types + api --------
+# 关键：先清 dist 和 tsbuildinfo 缓存，避免增量编译用旧缓存
+RUN rm -rf /app/apps/api/dist /app/apps/api/tsconfig.build.tsbuildinfo /app/packages/shared-types/dist
 RUN npm --workspace @wm-card/shared-types run build
 RUN npm --workspace @wm-card/api run build
 
-# -------- 6. POST-BUILD 校验：dist 必须包含关键新模块 + .prisma 完整 --------
+# 输出 build 时间戳用于诊断
+RUN echo "--- dist build time ---" && stat /app/apps/api/dist/main.js | grep Modify
+
+# -------- 6. POST-BUILD 校验：dist 必须包含关键新模块 + .prisma 完整 + 时间戳新鲜 --------
 # 这是为了防止历史踩坑（dist 缺新模块 / Prisma enum 缺失但 build 不报错）
 RUN set -e; \
     echo "--- post-build validation ---"; \
