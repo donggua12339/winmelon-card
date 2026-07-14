@@ -118,6 +118,16 @@ const routes = [
         name: 'admin-api-keys',
         component: () => import('@/views/admin/ApiKeys.vue'),
       },
+      {
+        path: 'articles',
+        name: 'admin-articles',
+        component: () => import('@/views/admin/Articles.vue'),
+      },
+      {
+        path: 'tickets',
+        name: 'admin-tickets',
+        component: () => import('@/views/admin/Tickets.vue'),
+      },
     ],
   },
   // 商户工作台（仅 MERCHANT 角色可访问）
@@ -162,6 +172,21 @@ const routes = [
         path: 'withdrawals',
         name: 'merchant-withdrawals',
         component: () => import('@/views/merchant/Withdrawals.vue'),
+      },
+      {
+        path: 'payment-channels',
+        name: 'merchant-payment-channels',
+        component: () => import('@/views/merchant/PaymentChannels.vue'),
+      },
+      {
+        path: 'invite',
+        name: 'merchant-invite',
+        component: () => import('@/views/merchant/Invite.vue'),
+      },
+      {
+        path: 'tickets',
+        name: 'merchant-tickets',
+        component: () => import('@/views/merchant/Tickets.vue'),
       },
       {
         path: 'change-password',

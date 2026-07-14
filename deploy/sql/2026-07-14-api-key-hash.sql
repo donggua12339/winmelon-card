@@ -8,8 +8,8 @@
 --   ALTER TABLE api_keys MODIFY keyHash VARCHAR(64) NOT NULL;
 -- ============================================================
 
--- 1. 加 keyHash 列（如果 schema.prisma 已 migrate 则跳过）
--- Prisma migrate 会自动加列，这里不重复
+-- 1. 加 keyHash 列（sha256 hex = 64 字符，nullable + unique 兼容过渡期）
+ALTER TABLE api_keys ADD COLUMN keyHash VARCHAR(64) NULL UNIQUE;
 
 -- 2. 为所有现有 key 填充 keyHash（SHA-256 hex，与 Node.js crypto.createHash('sha256').update(key, 'utf8').digest('hex') 一致）
 UPDATE api_keys

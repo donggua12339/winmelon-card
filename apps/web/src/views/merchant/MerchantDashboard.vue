@@ -4,31 +4,53 @@ import { get } from '@/api/http';
 import { useRouter } from 'vue-router';
 
 interface DashboardStats {
-  today: { orders: number; paidOrders: number; revenue: number };
+  today: { orders: number; paidOrders: number; revenue: number; uv: number; conversionRate: number };
+  yesterday: { uv: number };
   month: { paidOrders: number; revenue: number; grossRevenue: number };
   pendingOrders: number;
   totalOrders: number;
   repurchaseRate: number;
   topProducts: { productId: string; productName: string; sold: number; revenue: number }[];
   trend7d: { date: string; orders: number; revenue: number }[];
+  uvTrend7d: { date: string; uv: number; pv: number }[];
 }
 
 const router = useRouter();
 const stats = ref<DashboardStats | null>(null);
 const loading = ref(false);
 
-// 处理 7 天趋势数据用于折线图（用 SVG）
+// 处理 7 天 UV 趋势数据（用于双轴展示）
 const trendMaxOrders = computed(() => {
   if (!stats.value?.trend7d.length) return 0;
   return Math.max(...stats.value.trend7d.map((d) => d.orders), 1);
 });
 
+const trendMaxUv = computed(() => {
+  if (!stats.value?.uvTrend7d?.length) return 0;
+  return Math.max(...stats.value.uvTrend7d.map((d) => d.uv), 1);
+});
+
 const trendBars = computed(() => {
-  const data = stats.value?.trend7d ?? [];
-  return data.map((d) => ({
-    ...d,
-    heightPct: Math.max(8, Math.round((d.orders / trendMaxOrders.value) * 100)),
-  }));
+  const orderData = stats.value?.trend7d ?? [];
+  const uvData = stats.value?.uvTrend7d ?? [];
+  // 合并订单和 UV 数据到同一日期轴
+  return orderData.map((d) => {
+    const uv = uvData.find((u) => u.date === d.date)?.uv ?? 0;
+    return {
+      ...d,
+      uv,
+      heightPct: Math.max(8, Math.round((d.orders / trendMaxOrders.value) * 100)),
+      uvHeightPct: Math.max(8, Math.round((uv / Math.max(trendMaxUv.value, 1)) * 100)),
+    };
+  });
+});
+
+// UV 环比变化
+const uvDelta = computed(() => {
+  const today = stats.value?.today.uv ?? 0;
+  const yesterday = stats.value?.yesterday.uv ?? 0;
+  if (yesterday === 0) return today > 0 ? 100 : 0;
+  return Math.round(((today - yesterday) / yesterday) * 100);
 });
 
 function formatMoney(n: number): string {
@@ -79,15 +101,20 @@ onMounted(fetchStats);
         <div class="kpi-value">{{ formatMoney(stats?.today.revenue ?? 0) }}</div>
         <div class="kpi-sub"><span class="kpi-dot green"></span>实时统计</div>
       </div>
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-label">今日 UV</div>
+        <div class="kpi-value">{{ stats?.today.uv ?? 0 }}</div>
+        <div class="kpi-sub">
+          <span class="kpi-dot purple"></span>转化率 {{ stats?.today.conversionRate ?? 0 }}% · 环比
+          <span :style="{ color: uvDelta >= 0 ? '#10b981' : '#ef4444' }">
+            {{ uvDelta >= 0 ? '+' : '' }}{{ uvDelta }}%
+          </span>
+        </div>
+      </div>
       <div class="kpi-card kpi-orange">
         <div class="kpi-label">待处理订单</div>
         <div class="kpi-value">{{ stats?.pendingOrders ?? 0 }}</div>
         <div class="kpi-sub"><span class="kpi-dot orange"></span>需关注</div>
-      </div>
-      <div class="kpi-card kpi-purple">
-        <div class="kpi-label">本月复购率</div>
-        <div class="kpi-value">{{ stats?.repurchaseRate ?? 0 }}%</div>
-        <div class="kpi-sub"><span class="kpi-dot purple"></span>本月数据</div>
       </div>
     </div>
 
@@ -119,6 +146,12 @@ onMounted(fetchStats);
           <div class="summary-value">{{ formatMoney(stats?.month.grossRevenue ?? 0) }}</div>
           <div class="summary-trend">含退款等</div>
         </div>
+        <div class="summary-divider"></div>
+        <div class="summary-item">
+          <div class="summary-label">复购率</div>
+          <div class="summary-value">{{ stats?.repurchaseRate ?? 0 }}%</div>
+          <div class="summary-trend">本月买家</div>
+        </div>
       </div>
     </el-card>
 
@@ -128,13 +161,22 @@ onMounted(fetchStats);
         <el-card class="section-card" shadow="never">
           <template #header>
             <div class="section-header">
-              <span class="section-title">📈 最近 7 天订单趋势</span>
+              <span class="section-title">📈 最近 7 天订单 / UV 趋势</span>
+              <div class="trend-legend">
+                <span class="legend-item"><span class="legend-dot orders"></span>订单</span>
+                <span class="legend-item"><span class="legend-dot uv"></span>UV</span>
+              </div>
             </div>
           </template>
           <div v-if="trendBars.length" class="trend-chart">
             <div v-for="d in trendBars" :key="d.date" class="trend-bar-wrap">
-              <div class="trend-bar" :style="{ height: d.heightPct + '%' }">
-                <span class="trend-value">{{ d.orders }}</span>
+              <div class="trend-bar-stack">
+                <div class="trend-bar uv-bar" :style="{ height: d.uvHeightPct + '%' }">
+                  <span class="trend-value uv-value">{{ d.uv }}</span>
+                </div>
+                <div class="trend-bar" :style="{ height: d.heightPct + '%' }">
+                  <span class="trend-value">{{ d.orders }}</span>
+                </div>
               </div>
               <div class="trend-date">
                 {{ new Date(d.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) }}
@@ -388,9 +430,18 @@ onMounted(fetchStats);
   justify-content: flex-end;
 }
 
-.trend-bar {
+.trend-bar-stack {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
   width: 100%;
-  max-width: 36px;
+  justify-content: center;
+  height: 100%;
+}
+
+.trend-bar {
+  width: 18px;
+  max-width: 24px;
   background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
   border-radius: 6px 6px 0 0;
   position: relative;
@@ -402,16 +453,52 @@ onMounted(fetchStats);
   transition: height 0.5s ease;
 }
 
+.uv-bar {
+  background: linear-gradient(180deg, #c084fc 0%, #a855f7 100%);
+}
+
 .trend-value {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #fff;
+}
+
+.uv-value {
+  font-size: 10px;
 }
 
 .trend-date {
   font-size: 11px;
   color: #64748b;
   margin-top: 6px;
+}
+
+.trend-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.legend-dot.orders {
+  background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
+}
+
+.legend-dot.uv {
+  background: linear-gradient(180deg, #c084fc 0%, #a855f7 100%);
 }
 
 /* Top 5 列表 */

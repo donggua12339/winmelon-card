@@ -88,6 +88,7 @@ export class PaymentService implements OnModuleInit {
         status: true,
         expireAt: true,
         items: { select: { productName: true } },
+        shop: { select: { merchantId: true } },
       },
     });
     if (!order) throw new NotFoundException('订单不存在');
@@ -95,6 +96,19 @@ export class PaymentService implements OnModuleInit {
     if (order.expireAt < new Date()) throw new BadRequestException('订单已超时');
 
     const channel = await this.getAvailableChannel(channelCode);
+    // P1-2：校验商户是否启用了该支付通道
+    const merchantChannel = await this.prisma.merchantPaymentChannel.findUnique({
+      where: {
+        merchantId_channelCode: {
+          merchantId: order.shop.merchantId,
+          channelCode,
+        },
+      },
+      select: { isEnabled: true },
+    });
+    if (!merchantChannel?.isEnabled) {
+      throw new BadRequestException(`商户未启用 ${channelCode} 支付通道`);
+    }
     const adapter = this.getAdapter(channelCode);
     const config = this.decryptConfig(channel.config);
 

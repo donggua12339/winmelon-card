@@ -8,13 +8,15 @@
 ALTER TABLE users ADD COLUMN tokenEpoch INT NOT NULL DEFAULT 0;
 
 -- P1-5: 删除 merchantId 唯一索引（允许一个商户多个用户/STAFF）
--- 先查索引名（Prisma 生成的唯一索引名通常是 users_merchantId_key）
--- 如果索引名不同，请用 SHOW INDEX FROM users WHERE Column_name = 'merchantId'; 查
-ALTER TABLE users DROP INDEX users_merchantId_key;
+-- 注意：merchantId 是 FK，MySQL 不允许直接删被 FK 使用的唯一索引
+-- 解决：先加普通索引，再删唯一索引（MySQL 会用普通索引替代供 FK 使用）
 
--- 加普通索引（查询商户下所有用户用）
+-- 1. 先加普通索引（如果已存在会报错，可忽略）
 CREATE INDEX users_merchantId_idx ON users(merchantId);
 
+-- 2. 再删唯一索引
+ALTER TABLE users DROP INDEX users_merchantId_key;
+
 -- 校验
-DESCRIBE users;
 SHOW INDEX FROM users WHERE Column_name = 'merchantId';
+SELECT id, username, role, merchantId, tokenEpoch FROM users LIMIT 5;

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ElMessageBox } from 'element-plus';
+import NotificationBell from '@/components/NotificationBell.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -53,6 +54,8 @@ const menuItems = [
   { path: '/admin/api-keys', icon: '🔐', label: 'API Key' },
   { path: '/admin/domain', icon: '🌐', label: '自定义域名' },
   { path: '/admin/withdrawals', icon: '💰', label: '提现审核' },
+  { path: '/admin/articles', icon: '📰', label: '文章公告' },
+  { path: '/admin/tickets', icon: '🎫', label: '工单处理' },
   { path: '/admin/risk', icon: '🛡️', label: '行为风控' },
   { path: '/admin/stats', icon: '📈', label: '高级统计' },
   { path: '/admin/audit-logs', icon: '📋', label: '审计日志' },
@@ -98,6 +101,7 @@ const menuItems = [
           <h1 class="page-title-text">{{ pageTitle }}</h1>
         </div>
         <div class="topbar-right">
+          <NotificationBell />
           <el-dropdown trigger="click" @command="(cmd: string) => (cmd === 'logout' ? onLogout() : onChangePassword())">
             <div class="user-chip">
               <div class="avatar">{{ (auth.user?.username?.[0] || '?').toUpperCase() }}</div>

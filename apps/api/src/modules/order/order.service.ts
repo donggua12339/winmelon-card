@@ -140,6 +140,7 @@ export class OrderService {
             status: 'PENDING',
             expireAt,
             idempotencyKey: dto.idempotencyKey,
+            usedInviteCode: dto.inviteCode || null,
             items: { create: orderItems },
           },
         });

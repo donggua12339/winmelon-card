@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
+import { PageViewService } from '../page-view/page-view.service';
 import type { TokenPayload } from '../auth/dto/token-payload.interface';
 import { getDefaultRedirect, type LoginResult } from '../auth/dto/login-result.interface';
 
@@ -23,6 +24,7 @@ export class MerchantProfileService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly redis: RedisService,
+    private readonly pageView: PageViewService,
     private readonly jwt: JwtService,
     config: ConfigService,
   ) {
@@ -139,6 +141,13 @@ export class MerchantProfileService {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
+    // 查商户所有店铺 ID（用于 UV 统计）
+    const shops = await this.prisma.shop.findMany({
+      where: { merchantId },
+      select: { id: true },
+    });
+    const shopIds = shops.map((s) => s.id);
+
     const [todayOrders, todayPaid, monthPaid, pendingOrders, totalOrders, totalRevenueRaw, topProducts, orderTrend] =
       await Promise.all([
         this.prisma.order.count({
@@ -196,6 +205,61 @@ export class MerchantProfileService {
       `,
       ]);
 
+    // P0-3 UV 统计：今日 UV、昨日 UV、7 日每日 UV 趋势
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const sevenDaysAgo = new Date(todayStart);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    let todayUv = 0;
+    let yesterdayUv = 0;
+    let uvTrend7d: Array<{ date: string; uv: number; pv: number }> = [];
+
+    if (shopIds.length > 0) {
+      const [todayStats, yesterdayStats] = await Promise.all([
+        this.prisma.pageView.findMany({
+          where: { shopId: { in: shopIds }, createdAt: { gte: todayStart } },
+          select: { visitorId: true },
+          distinct: ['visitorId'],
+        }),
+        this.prisma.pageView.findMany({
+          where: { shopId: { in: shopIds }, createdAt: { gte: yesterdayStart, lt: todayStart } },
+          select: { visitorId: true },
+          distinct: ['visitorId'],
+        }),
+      ]);
+      todayUv = todayStats.length;
+      yesterdayUv = yesterdayStats.length;
+
+      // 7 日 UV 趋势
+      const uvRows = await this.prisma.pageView.findMany({
+        where: { shopId: { in: shopIds }, createdAt: { gte: sevenDaysAgo } },
+        select: { visitorId: true, createdAt: true },
+      });
+      const uvDayMap = new Map<string, Set<string>>();
+      const pvDayMap = new Map<string, number>();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(sevenDaysAgo);
+        d.setDate(d.getDate() + i);
+        const key = d.toISOString().slice(0, 10);
+        uvDayMap.set(key, new Set());
+        pvDayMap.set(key, 0);
+      }
+      for (const r of uvRows) {
+        const key = r.createdAt.toISOString().slice(0, 10);
+        uvDayMap.get(key)?.add(r.visitorId);
+        pvDayMap.set(key, (pvDayMap.get(key) ?? 0) + 1);
+      }
+      uvTrend7d = Array.from(uvDayMap.entries()).map(([date, visitors]) => ({
+        date,
+        uv: visitors.size,
+        pv: pvDayMap.get(date) ?? 0,
+      }));
+    }
+
+    // 转化率 = 今日支付订单数 / 今日 UV
+    const conversionRate = todayUv > 0 ? Math.round((todayPaid._count / todayUv) * 100) : 0;
+
     // 复购率：统计本月已支付订单中，相同 email 出现 ≥2 次的比例
     const buyerStats = await this.prisma.$queryRaw<Array<{ buyerEmail: string; cnt: number }>>`
       SELECT o.buyerEmail, COUNT(*) AS cnt
@@ -215,6 +279,11 @@ export class MerchantProfileService {
         orders: todayOrders,
         paidOrders: todayPaid._count,
         revenue: Number(todayPaid._sum.totalAmount ?? 0),
+        uv: todayUv,
+        conversionRate,
+      },
+      yesterday: {
+        uv: yesterdayUv,
       },
       month: {
         paidOrders: monthPaid._count,
@@ -235,6 +304,7 @@ export class MerchantProfileService {
         orders: Number(t.count),
         revenue: Number(t.revenue),
       })),
+      uvTrend7d,
     };
   }
 

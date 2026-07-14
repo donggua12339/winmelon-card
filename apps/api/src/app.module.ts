@@ -23,6 +23,12 @@ import { RiskModule } from './modules/risk/risk.module';
 import { OpenApiModule } from './modules/open-api/open-api.module';
 import { MerchantProfileModule } from './modules/merchant-profile/merchant-profile.module';
 import { WithdrawalModule } from './modules/withdrawal/withdrawal.module';
+import { PageViewModule } from './modules/page-view/page-view.module';
+import { ArticleModule } from './modules/article/article.module';
+import { MerchantPaymentChannelModule } from './modules/merchant-payment-channel/merchant-payment-channel.module';
+import { InviteModule } from './modules/invite/invite.module';
+import { TicketModule } from './modules/ticket/ticket.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -54,6 +60,12 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     OpenApiModule,
     MerchantProfileModule,
     WithdrawalModule,
+    PageViewModule,
+    ArticleModule,
+    MerchantPaymentChannelModule,
+    InviteModule,
+    TicketModule,
+    NotificationModule,
     HealthModule,
   ],
   providers: [

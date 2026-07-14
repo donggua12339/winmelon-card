@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ElMessageBox } from 'element-plus';
+import NotificationBell from '@/components/NotificationBell.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -26,6 +27,9 @@ const menuItems = [
   { path: '/merchant/api-keys', icon: '🔐', label: 'API Key' },
   { path: '/merchant/domain', icon: '🌐', label: '自定义域名' },
   { path: '/merchant/withdrawals', icon: '💰', label: '提现结算' },
+  { path: '/merchant/payment-channels', icon: '💳', label: '支付通道' },
+  { path: '/merchant/invite', icon: '🎟️', label: '推广邀请' },
+  { path: '/merchant/tickets', icon: '🎫', label: '工单处理' },
 ];
 </script>
 
@@ -68,6 +72,7 @@ const menuItems = [
           <h1 class="page-title-text">{{ getPageTitle($route.path) }}</h1>
         </div>
         <div class="topbar-right">
+          <NotificationBell />
           <el-dropdown trigger="click" @command="(cmd: string) => (cmd === 'logout' ? onLogout() : onChangePassword())">
             <div class="user-chip">
               <div class="avatar">{{ (auth.user?.username?.[0] || '?').toUpperCase() }}</div>
@@ -110,6 +115,7 @@ const titles: Record<string, string> = {
   '/merchant/api-keys': 'API Key',
   '/merchant/domain': '自定义域名',
   '/merchant/withdrawals': '提现结算',
+  '/merchant/payment-channels': '支付通道',
   '/merchant/settings': '账户设置',
   '/merchant/change-password': '修改密码',
 };

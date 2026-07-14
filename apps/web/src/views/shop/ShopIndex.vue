@@ -119,6 +119,10 @@ async function onSubmitOrder(): Promise<void> {
 onMounted(() => {
   fetchShop();
   fetchProducts();
+  // 上报页面访问（UV 统计，失败静默不影响用户体验）
+  post(`/shop/${shopCode}/track`, { path: window.location.pathname })
+    .then(() => undefined)
+    .catch(() => undefined);
 });
 </script>
 

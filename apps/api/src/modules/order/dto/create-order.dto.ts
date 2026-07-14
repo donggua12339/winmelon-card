@@ -43,4 +43,9 @@ export class CreateOrderDto {
   @Type(() => CreateOrderItemDto)
   @ArrayMinSize(1)
   items!: CreateOrderItemDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  inviteCode?: string;
 }
