@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
@@ -14,7 +14,7 @@ import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-p
 const NOTIFY_IDEMPOTENCY_TTL_SEC = 24 * 60 * 60; // 回调幂等记录保留 24h
 
 @Injectable()
-export class PaymentService {
+export class PaymentService implements OnModuleInit {
   private readonly logger = new Logger(PaymentService.name);
   private readonly adapters: Map<string, PaymentAdapter>;
   private readonly baseUrl: string;
@@ -36,6 +36,39 @@ export class PaymentService {
       [mockAdapter.code, mockAdapter],
       [usdtAdapter.code, usdtAdapter],
     ]);
+  }
+
+  /**
+   * 启动时自动迁移：把旧的明文 PaymentChannel.config 加密
+   * 幂等，已是加密格式则跳过
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const channels = await this.prisma.paymentChannel.findMany({
+        select: { code: true, config: true },
+      });
+      for (const ch of channels) {
+        if (!ch.config) continue;
+        try {
+          const parsed = JSON.parse(ch.config);
+          // 已是加密格式（含 ciphertext/iv/tag）
+          if (parsed && typeof parsed === 'object' && parsed.ciphertext && parsed.iv && parsed.tag) {
+            continue;
+          }
+          // 明文 JSON，加密后写回
+          const encrypted = this.encryptConfig(parsed as Record<string, unknown>);
+          await this.prisma.paymentChannel.update({
+            where: { code: ch.code },
+            data: { config: encrypted },
+          });
+          this.logger.log(`已加密支付通道配置: ${ch.code}`);
+        } catch {
+          this.logger.warn(`支付通道 ${ch.code} 配置解析失败，跳过迁移`);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`支付通道配置迁移检查失败: ${(err as Error).message}`);
+    }
   }
 
   /**
@@ -158,7 +191,7 @@ export class PaymentService {
           select: { id: true, status: true, totalAmount: true },
         });
         if (!order) {
-          throw new Error(`订单不存在 outTradeNo=${notify.outTradeNo}`);
+          throw new NotFoundException(`订单不存在 outTradeNo=${notify.outTradeNo}`);
         }
 
         // 已支付/已发卡，直接幂等返回
@@ -166,12 +199,12 @@ export class PaymentService {
           return { alreadyPaid: true };
         }
         if (order.status !== 'PENDING') {
-          throw new Error(`订单状态异常 orderNo=${notify.outTradeNo} status=${order.status}`);
+          throw new BadRequestException(`订单状态异常 orderNo=${notify.outTradeNo} status=${order.status}`);
         }
 
         // 金额校验（防伪造）
         if (order.totalAmount.toString() !== notify.amount) {
-          throw new Error(`金额不匹配 order=${order.totalAmount} notify=${notify.amount}`);
+          throw new BadRequestException(`金额不匹配 order=${order.totalAmount} notify=${notify.amount}`);
         }
 
         // 更新订单
@@ -349,17 +382,35 @@ export class PaymentService {
     return adapter;
   }
 
+  /**
+   * 解密通道配置
+   * - 新格式：JSON 字符串 {ciphertext, iv, tag}，用 AesGcmService 解密
+   * - 兼容旧格式：明文 JSON 字符串（迁移期间）
+   * 失败返回 {}，调用方应处理空配置
+   */
   private decryptConfig(encrypted: string): Record<string, unknown> {
+    if (!encrypted) return {};
     try {
-      // config 存储格式：JSON 字符串。MVP 阶段先不加密，直接 JSON.parse
-      // V2 版本可用 aes.encrypt 加密整段 JSON
-      return JSON.parse(encrypted);
+      const parsed = JSON.parse(encrypted);
+      if (parsed && typeof parsed === 'object' && parsed.ciphertext && parsed.iv && parsed.tag) {
+        // 新格式：AES-256-GCM 加密
+        const json = this.aes.decrypt({
+          ciphertext: parsed.ciphertext,
+          iv: parsed.iv,
+          tag: parsed.tag,
+        });
+        return JSON.parse(json);
+      }
+      // 旧格式：明文 JSON（兼容迁移期）
+      return parsed as Record<string, unknown>;
     } catch {
       return {};
     }
   }
 
   private encryptConfig(config: Record<string, unknown>): string {
-    return JSON.stringify(config);
+    const json = JSON.stringify(config);
+    const payload = this.aes.encrypt(json);
+    return JSON.stringify(payload);
   }
 }

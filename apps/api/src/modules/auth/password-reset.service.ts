@@ -6,7 +6,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 
 const CODE_TTL_SEC = 10 * 60; // 验证码 10 分钟
 const RESEND_COOLDOWN_SEC = 60; // 60s 冷却
@@ -69,7 +69,7 @@ export class PasswordResetService {
         data: { usedAt: new Date() },
       });
 
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = randomInt(100000, 1000000).toString();
       const expiresAt = new Date(Date.now() + CODE_TTL_SEC * 1000);
 
       await this.prisma.emailVerification.create({
@@ -238,7 +238,7 @@ export class PasswordResetService {
 
   /** 生成图形验证码（4 位数字 + 简单干扰线），存 Redis */
   async generateCaptcha(): Promise<{ id: string; image: string }> {
-    const code = Math.floor(1000 + Math.random() * 9000).toString(); // 4 位
+    const code = randomInt(1000, 10000).toString(); // 4 位
     const id = randomBytes(16).toString('hex');
     await this.redis.set(`captcha:${id}`, code.toLowerCase(), 'EX', CAPTCHA_TTL_SEC);
 

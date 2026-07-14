@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, type CurrentUserPayload } from '../../common/decorators/current-user.decorator';
@@ -14,7 +14,7 @@ export class MerchantDashboardController {
 
   @Get('stats')
   async stats(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.getDashboardStats(user.merchantId);
   }
 }

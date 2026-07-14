@@ -14,6 +14,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import type { NestApplication } from '@nestjs/core';
 import { json, urlencoded } from 'express';
+import { validateCriticalConfig } from './infrastructure/config/config.validator';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestApplication>(AppModule, {
@@ -22,6 +23,8 @@ async function bootstrap(): Promise<void> {
   });
 
   const config = app.get(ConfigService);
+  // 启动期校验关键密钥，缺失直接 fail fast
+  validateCriticalConfig(config);
   const port = config.get<number>('PORT', 3000);
   const prefix = config.get<string>('API_PREFIX', 'api');
   const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:5173');

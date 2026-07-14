@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -35,13 +35,13 @@ export class MerchantProfileController {
 
   @Get()
   async get(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.getProfile(user.merchantId);
   }
 
   @Post('theme')
   async setTheme(@CurrentUser() user: CurrentUserPayload, @Body() dto: SetThemeDto, @Req() req: Request) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.setTheme(user.merchantId, dto.color, {
       userId: user.userId,
       ip: req.ip ?? '',
@@ -51,7 +51,7 @@ export class MerchantProfileController {
 
   @Post('password')
   async changePassword(@CurrentUser() user: CurrentUserPayload, @Body() dto: ChangePasswordDto, @Req() req: Request) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.changePassword(user.merchantId, user.userId, dto, {
       ip: req.ip ?? '',
       ua: req.get('user-agent') ?? '',

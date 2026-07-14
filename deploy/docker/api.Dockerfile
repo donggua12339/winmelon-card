@@ -32,6 +32,10 @@ COPY apps/api/prebuilt-prisma/node_modules/@nestjs/swagger /app/node_modules/@ne
 RUN npm --workspace @wm-card/shared-types run build
 RUN npm --workspace @wm-card/api run build
 
+# 构建完成后裁剪 dev 依赖，减小生产镜像体积 + 减少攻击面
+# @prisma/client 是 dependencies，prisma engine binaries 在 .prisma 目录，不受影响
+RUN npm prune --omit=dev --legacy-peer-deps
+
 # ============================================================
 # Stage 2: 生产镜像
 # ============================================================

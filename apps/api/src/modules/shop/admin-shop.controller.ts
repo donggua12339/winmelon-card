@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { ShopService } from './shop.service';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -58,7 +58,7 @@ export class AdminShopController {
 
   private requireMerchant(user: CurrentUserPayload): void {
     if (!user.merchantId) {
-      throw new Error('当前用户未关联商户');
+      throw new ForbiddenException('当前用户未关联商户');
     }
   }
 }

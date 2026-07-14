@@ -86,7 +86,8 @@ enum MerchantStatus {
 
 model ApiKey {
   id          String    @id @default(uuid())
-  key         String    @unique @db.VarChar(64) // sk_live_xxx
+  key         String    @unique @db.VarChar(64) // sk_live_xxx（3 天过渡后删除）
+  keyHash     String?   @unique @db.VarChar(64) // sha256(key) hex，新主存储
   keyHint     String    @db.VarChar(16)         // sk_live_...xxxx（列表显示用）
   name        String    @db.VarChar(64)         // 描述性名称
   merchantId  String

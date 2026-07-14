@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { sanitizeRichHtml } from '../../common/utils/sanitize';
 
 @Injectable()
 export class ShopService {
@@ -163,7 +164,9 @@ export class ShopService {
     const data: { name?: string; announcement?: string | null; footerHtml?: string | null; isOnline?: boolean } = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.announcement !== undefined) data.announcement = dto.announcement;
-    if (dto.footerHtml !== undefined) data.footerHtml = dto.footerHtml;
+    // footerHtml 白名单过滤，防止商户注入 <script> 等危险标签
+    if (dto.footerHtml !== undefined)
+      data.footerHtml = dto.footerHtml === null ? null : sanitizeRichHtml(dto.footerHtml);
     if (dto.isOnline !== undefined) data.isOnline = dto.isOnline;
 
     return this.prisma.shop.update({

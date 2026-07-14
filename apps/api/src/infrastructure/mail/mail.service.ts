@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter, type SendMailOptions } from 'nodemailer';
+import { escapeHtml } from '../../common/utils/sanitize';
 
 export interface MailOptions {
   to: string;
@@ -84,8 +85,8 @@ export class MailService {
         (c) => `
         <tr>
           <td style="padding:12px;border:1px solid #e2e8f0;background:#f8fafc;">
-            <div style="font-size:13px;color:#64748b;margin-bottom:4px;">${c.productName}</div>
-            <code style="font-family:monospace;font-size:15px;color:#1e293b;word-break:break-all;background:#1e293b;color:#a5b4fc;padding:8px 12px;border-radius:6px;display:inline-block;">${c.content}</code>
+            <div style="font-size:13px;color:#64748b;margin-bottom:4px;">${escapeHtml(c.productName)}</div>
+            <code style="font-family:monospace;font-size:15px;color:#1e293b;word-break:break-all;background:#1e293b;color:#a5b4fc;padding:8px 12px;border-radius:6px;display:inline-block;">${escapeHtml(c.content)}</code>
           </td>
         </tr>`,
       )
@@ -246,23 +247,23 @@ export class MailService {
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:24px 0;">
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
             <span style="color:#64748b;font-size:14px;">商户名称</span>
-            <span style="color:#1e293b;font-size:14px;font-weight:600;">${opts.merchantName}</span>
+            <span style="color:#1e293b;font-size:14px;font-weight:600;">${escapeHtml(opts.merchantName)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
             <span style="color:#64748b;font-size:14px;">店铺名称</span>
-            <span style="color:#1e293b;font-size:14px;font-weight:600;">${opts.shopName}</span>
+            <span style="color:#1e293b;font-size:14px;font-weight:600;">${escapeHtml(opts.shopName)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
             <span style="color:#64748b;font-size:14px;">店铺路径</span>
-            <span style="color:#7c3aed;font-size:14px;font-family:monospace;">/shop/${opts.shopCode}</span>
+            <span style="color:#7c3aed;font-size:14px;font-family:monospace;">/shop/${escapeHtml(opts.shopCode)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;">
             <span style="color:#64748b;font-size:14px;">登录邮箱</span>
-            <span style="color:#1e293b;font-size:14px;">${opts.to}</span>
+            <span style="color:#1e293b;font-size:14px;">${escapeHtml(opts.to)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:8px 0;align-items:center;">
             <span style="color:#64748b;font-size:14px;">初始密码</span>
-            <code style="background:#1e293b;color:#a5b4fc;padding:6px 12px;border-radius:4px;font-family:monospace;font-size:14px;">${opts.initialPassword}</code>
+            <code style="background:#1e293b;color:#a5b4fc;padding:6px 12px;border-radius:4px;font-family:monospace;font-size:14px;">${escapeHtml(opts.initialPassword)}</code>
           </div>
         </div>
         <div style="text-align:center;margin:24px 0;">

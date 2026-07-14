@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,7 +24,7 @@ export class ShopDomainController {
 
   @Get()
   async get(@CurrentUser() user: CurrentUserPayload, @Param('shopId') shopId: string) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.getDomain(user.merchantId, shopId);
   }
 
@@ -35,19 +35,19 @@ export class ShopDomainController {
     @Body() dto: SetShopDomainDto,
     @Req() req: Request,
   ) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.setDomain(user.merchantId, shopId, dto.domain, this.ctx(user, req));
   }
 
   @Post('verify')
   async verify(@CurrentUser() user: CurrentUserPayload, @Param('shopId') shopId: string, @Req() req: Request) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.verifyDomain(user.merchantId, shopId, this.ctx(user, req));
   }
 
   @Delete()
   async remove(@CurrentUser() user: CurrentUserPayload, @Param('shopId') shopId: string, @Req() req: Request) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.removeDomain(user.merchantId, shopId, this.ctx(user, req));
   }
 }

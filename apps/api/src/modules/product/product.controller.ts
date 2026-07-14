@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { ProductService, type AuditCtx } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -55,7 +68,7 @@ export class ProductController {
   async findOne(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string) {
     const merchantId = user.roles.includes('SUPER_ADMIN') ? undefined : user.merchantId;
     if (merchantId === undefined && !user.roles.includes('SUPER_ADMIN')) {
-      return { error: 'no-merchant' };
+      throw new ForbiddenException('当前账号未绑定商户');
     }
     return this.productService.findOne(merchantId, id);
   }
@@ -115,7 +128,7 @@ export class ProductController {
 
   private requireMerchant(user: CurrentUserPayload): void {
     if (!user.merchantId) {
-      throw new Error('当前账号未绑定商户，无法操作商品');
+      throw new ForbiddenException('当前账号未绑定商户，无法操作商品');
     }
   }
 

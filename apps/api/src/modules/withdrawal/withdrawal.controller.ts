@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { WithdrawalService } from './withdrawal.service';
 import { IsEnum, IsNumber, IsObject, IsString, Max, MaxLength, Min } from 'class-validator';
@@ -45,7 +45,7 @@ export class WithdrawalController {
   @UseGuards(RolesGuard)
   @Roles('MERCHANT')
   async getBalance(@CurrentUser() user: CurrentUserPayload) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.getBalance(user.merchantId);
   }
 
@@ -54,7 +54,7 @@ export class WithdrawalController {
   @Roles('MERCHANT')
   @Throttle({ perMin: 5 })
   async apply(@CurrentUser() user: CurrentUserPayload, @Body() dto: ApplyDto, @Req() req: Request) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.apply(user.merchantId, dto, {
       userId: user.userId,
       ip: req.ip ?? '',
@@ -71,7 +71,7 @@ export class WithdrawalController {
     @Query('pageSize') pageSize?: string,
     @Query('status') status?: WithdrawalStatus,
   ) {
-    if (!user.merchantId) throw new Error('no-merchant');
+    if (!user.merchantId) throw new ForbiddenException('当前账号未绑定商户');
     return this.service.listForMerchant(user.merchantId, {
       page: page ? Number(page) : 1,
       pageSize: pageSize ? Number(pageSize) : 20,

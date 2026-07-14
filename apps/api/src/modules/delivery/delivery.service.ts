@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
@@ -57,12 +57,12 @@ export class DeliveryService {
       where: { id: orderId },
       select: { id: true, orderNo: true, status: true },
     });
-    if (!order) throw new Error('订单不存在');
+    if (!order) throw new NotFoundException('订单不存在');
     if (order.status === 'DELIVERED') {
-      throw new Error('订单已发卡，无需补发');
+      throw new BadRequestException('订单已发卡，无需补发');
     }
     if (order.status !== 'PAID') {
-      throw new Error(`订单状态为 ${order.status}，无法补发`);
+      throw new BadRequestException(`订单状态为 ${order.status}，无法补发`);
     }
 
     await this.deliver({
@@ -107,7 +107,7 @@ export class DeliveryService {
           this.logger.log(`订单 ${payload.orderNo} 已发卡，跳过`);
           return;
         }
-        throw new Error(`订单状态异常，无法发卡 status=${order?.status ?? 'null'}`);
+        throw new BadRequestException(`订单状态异常，无法发卡 status=${order?.status ?? 'null'}`);
       }
 
       // 2. 把 LOCKED 卡标记 SOLD
@@ -123,7 +123,7 @@ export class DeliveryService {
       });
       const expected = orderItems.reduce((sum, it) => sum + it.quantity, 0);
       if (result.count !== expected) {
-        throw new Error(`发卡数量不匹配 expected=${expected} actual=${result.count}`);
+        throw new ConflictException(`发卡数量不匹配 expected=${expected} actual=${result.count}`);
       }
 
       this.logger.log(`发卡成功 orderNo=${payload.orderNo} count=${result.count}`);

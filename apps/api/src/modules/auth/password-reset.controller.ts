@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { Throttle } from '../../common/decorators/throttle.decorator';
@@ -64,7 +64,7 @@ export class PasswordResetController {
   async reset(@Body() dto: ResetPasswordDto, @Req() req: Request) {
     const captchaOk = await this.service.verifyCaptcha(dto.captchaId, dto.captchaCode);
     if (!captchaOk) {
-      throw new Error('图形验证码错误或已过期');
+      throw new BadRequestException('图形验证码错误或已过期');
     }
     return this.service.reset(
       { email: dto.email, code: dto.code, newPassword: dto.newPassword },

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
@@ -162,7 +162,7 @@ export class UsdtService {
       orderBy: { createdAt: 'desc' },
     });
     if (!payment || !payment.usdtWallet) {
-      throw new Error('未找到 USDT 支付记录');
+      throw new NotFoundException('未找到 USDT 支付记录');
     }
     return {
       orderNo,

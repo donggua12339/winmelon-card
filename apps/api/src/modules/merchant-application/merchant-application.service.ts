@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
@@ -272,24 +273,27 @@ export class MerchantApplicationService {
     }
   }
 
-  /** 生成 12 位强随机密码（含大小写+数字+特殊字符） */
+  /** 生成 12 位强随机密码（含大小写+数字+特殊字符），使用 crypto.randomInt 保证 CSPRNG */
   private generatePassword(): string {
     const upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
     const lower = 'abcdefghjkmnpqrstuvwxyz';
     const digits = '23456789';
     const special = '!@#$%^&*';
     const all = upper + lower + digits + special;
-    let pwd = '';
-    pwd += upper[Math.floor(Math.random() * upper.length)];
-    pwd += lower[Math.floor(Math.random() * lower.length)];
-    pwd += digits[Math.floor(Math.random() * digits.length)];
-    pwd += special[Math.floor(Math.random() * special.length)];
+    // charAt 总是返回 string（避免 noUncheckedIndexedAccess 导致的 string | undefined）
+    const pickFrom = (s: string): string => s.charAt(randomInt(0, s.length));
+    let pwd = pickFrom(upper) + pickFrom(lower) + pickFrom(digits) + pickFrom(special);
     for (let i = 0; i < 8; i++) {
-      pwd += all[Math.floor(Math.random() * all.length)];
+      pwd += pickFrom(all);
     }
-    return pwd
-      .split('')
-      .sort(() => Math.random() - 0.5)
-      .join('');
+    // Fisher-Yates 洗牌（CSPRNG 版本）
+    const arr = pwd.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randomInt(0, i + 1);
+      const tmp = arr[i]!;
+      arr[i] = arr[j]!;
+      arr[j] = tmp;
+    }
+    return arr.join('');
   }
 }
