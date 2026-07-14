@@ -141,6 +141,8 @@ export class OrderService {
             expireAt,
             idempotencyKey: dto.idempotencyKey,
             usedInviteCode: dto.inviteCode || null,
+            // P2-12: 反范式冗余 merchantId 加速列表查询
+            merchantId: shop.merchantId,
             items: { create: orderItems },
           },
         });
@@ -279,6 +281,7 @@ export class OrderService {
 
   /**
    * 后台：订单列表
+   * P2-12: 用冗余 merchantId 字段直接过滤，避免 join shops 表
    */
   async listForAdmin(
     merchantId: string | undefined,
@@ -286,7 +289,7 @@ export class OrderService {
   ) {
     const where: Prisma.OrderWhereInput = {};
     if (merchantId) {
-      where.shop = { merchantId };
+      where.merchantId = merchantId;
     }
     if (query.status) {
       where.status = query.status as Prisma.OrderWhereInput['status'];
@@ -333,7 +336,7 @@ export class OrderService {
   async findOneForAdmin(merchantId: string | undefined, orderId: string) {
     const where: Prisma.OrderWhereInput = { id: orderId };
     if (merchantId) {
-      where.shop = { merchantId };
+      where.merchantId = merchantId;
     }
     const order = await this.prisma.order.findFirst({
       where,

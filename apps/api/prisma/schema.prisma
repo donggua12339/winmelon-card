@@ -244,6 +244,8 @@ model Order {
   idempotencyKey String?  @unique @db.VarChar(64)
   // 邀请码（P2-1 返佣用，下单时绑定）
   usedInviteCode String?  @db.VarChar(16)
+  // P2-12: 反范式冗余字段 - 避免列表查询时的 join
+  merchantId     String?
   remark         String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -258,6 +260,7 @@ model Order {
   @@index([buyerEmail])
   @@index([expireAt])
   @@index([usedInviteCode])
+  @@index([merchantId, status, createdAt])
   @@map("orders")
 }
 
@@ -449,12 +452,17 @@ model MerchantApplication {
   reviewedById    String?  @db.VarChar(64)
   reviewedAt      DateTime?
   approvedMerchantId String? @db.VarChar(36) // 审核通过后创建的 merchant.id
+  // P2-8: 一次性激活 token（hash 存储，不用明文）
+  activationTokenHash String?  @db.VarChar(64)
+  activationExpiresAt DateTime?
+  activatedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([shopCode])
   @@index([status])
   @@index([contactEmail])
+  @@index([activationTokenHash])
   @@map("merchant_applications")
 }
 

@@ -54,6 +54,28 @@ export class AuditLogService {
     }
   }
 
+  /**
+   * P2-9: 关键操作的审计日志（如提现、密码重置）
+   * 写入失败会抛异常，配合 $transaction 让业务回滚
+   * 用于合规要求 100% 审计覆盖的场景
+   */
+  async recordCritical(input: AuditLogInput): Promise<void> {
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: input.actorId,
+        actorName: input.actorName,
+        action: input.action,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        beforeData: input.beforeData !== undefined ? safeStringify(input.beforeData) : undefined,
+        afterData: input.afterData !== undefined ? safeStringify(input.afterData) : undefined,
+        ip: input.ip,
+        userAgent: input.userAgent,
+        requestId: input.requestId,
+      },
+    });
+  }
+
   /** 后台查询审计日志 */
   async list(query: AuditLogQuery) {
     const where: Prisma.AuditLogWhereInput = {};

@@ -28,7 +28,8 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('PORT', 3000);
   const prefix = config.get<string>('API_PREFIX', 'api');
   const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:5173');
-  const enableSwagger = config.get<string>('ENABLE_SWAGGER', 'true') !== 'false';
+  // P2-2: 生产环境默认关闭 Swagger，避免 API 结构泄露
+  const enableSwagger = config.get<string>('ENABLE_SWAGGER', 'false') !== 'false';
 
   app.setGlobalPrefix(prefix);
 
@@ -41,8 +42,29 @@ async function bootstrap(): Promise<void> {
     expressInstance.set('trust proxy', trustProxy);
   }
 
+  // P2-1: CORS 动态允许商户已验证的自定义域名
+  // 提前获取 prismaService 供 CORS callback 使用
+  const prismaServiceForCors = app.get(PrismaService);
+
   app.enableCors({
-    origin: frontendUrl.split(',').map((s) => s.trim()),
+    origin: (origin, callback) => {
+      // P2-1: 动态允许商户已验证的自定义域名 + 平台主域
+      const allowOrigins = frontendUrl.split(',').map((s) => s.trim());
+      if (!origin) return callback(null, true); // 同源 / curl
+      if (allowOrigins.includes(origin)) return callback(null, true);
+      // 检查 DB 中已验证的自定义域名（异步查 + 缓存）
+      // 简化：每次都查 DB（生产可加 Redis 缓存 5min）
+      void prismaServiceForCors.shop
+        .findFirst({
+          where: { customDomain: new URL(origin).hostname, domainVerified: true },
+          select: { id: true },
+        })
+        .then((shop) => {
+          if (shop) callback(null, true);
+          else callback(new Error(`CORS blocked: ${origin}`));
+        })
+        .catch(() => callback(new Error('CORS check failed')));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Idempotency-Key'],

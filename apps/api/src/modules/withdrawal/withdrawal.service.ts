@@ -155,13 +155,29 @@ export class WithdrawalService {
       throw new BadRequestException(`当前状态 ${w.status}，无法审核通过`);
     }
 
-    await this.prisma.withdrawal.update({
-      where: { id: withdrawalId },
-      data: {
-        status: 'APPROVING',
-        processedById: adminCtx.userId,
-        processedAt: new Date(),
-      },
+    // P2-9: 业务变更 + 审计日志在同一事务内（保证原子性 + 100% 审计覆盖）
+    await this.prisma.$transaction(async (tx) => {
+      await tx.withdrawal.update({
+        where: { id: withdrawalId },
+        data: {
+          status: 'APPROVING',
+          processedById: adminCtx.userId,
+          processedAt: new Date(),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: adminCtx.userId,
+          actorName: adminCtx.username,
+          action: 'withdrawal.approve',
+          resourceType: 'withdrawal',
+          resourceId: withdrawalId,
+          beforeData: JSON.stringify({ status: 'PENDING' }),
+          afterData: JSON.stringify({ status: 'APPROVING' }),
+          ip: adminCtx.ip,
+          userAgent: adminCtx.ua,
+        },
+      });
     });
 
     // 通知商户
@@ -176,18 +192,6 @@ export class WithdrawalService {
         </div>
       `,
       text: `您的提现申请 ¥${w.actual} 已通过审核。提现单号：${w.id}`,
-    });
-
-    await this.auditLog.record({
-      actorId: adminCtx.userId,
-      actorName: adminCtx.username,
-      action: 'withdrawal.approve',
-      resourceType: 'withdrawal',
-      resourceId: withdrawalId,
-      beforeData: { status: 'PENDING' },
-      afterData: { status: 'APPROVING' },
-      ip: adminCtx.ip,
-      userAgent: adminCtx.ua,
     });
 
     // 通知商户：提现已审核通过

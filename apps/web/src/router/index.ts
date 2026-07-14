@@ -243,18 +243,43 @@ router.beforeEach(async (to) => {
   const isSuperAdmin = roles.includes('SUPER_ADMIN');
   const isMerchant = roles.includes('MERCHANT');
 
-  // /admin/* 仅 SUPER_ADMIN 可访问（MERCHANT 自动 alias 到 /merchant/* 同名页面）
+  // P2-3: /admin/* 仅 SUPER_ADMIN 可访问（MERCHANT 自动 alias 到 /merchant/* 同名页面）
+  // 维护 admin → merchant 路由映射表，没有映射的路径回 dashboard
+  const ADMIN_TO_MERCHANT_MAP: Record<string, string> = {
+    '/admin/dashboard': '/merchant/dashboard',
+    '/admin/products': '/merchant/products',
+    '/admin/stock': '/merchant/stock',
+    '/admin/orders': '/merchant/orders',
+    '/admin/api-keys': '/merchant/api-keys',
+    '/admin/domain': '/merchant/domain',
+    '/admin/withdrawals': '/merchant/withdrawals',
+    '/admin/payment-channels': '/merchant/payment-channels',
+    '/admin/invite': '/merchant/invite',
+    '/admin/tickets': '/merchant/tickets',
+    '/admin/change-password': '/merchant/change-password',
+    '/admin/settings': '/merchant/settings',
+  };
+
   if (isAdminArea && !isSuperAdmin && isMerchant) {
-    const aliasPath = to.path.replace(/^\/admin/, '/merchant');
-    return { path: aliasPath, query: to.query, hash: to.hash };
+    // 先查映射表
+    const mapped = ADMIN_TO_MERCHANT_MAP[to.path];
+    if (mapped) {
+      return { path: mapped, query: to.query, hash: to.hash };
+    }
+    // 路径无映射（平台独有功能：系统配置/审计日志/风控/统计/商户审核/文章公告）
+    // 提示用户该功能仅限平台管理员，redirect 到 merchant dashboard
+    ElMessage.warning('该功能仅限平台管理员访问');
+    return { path: '/merchant/dashboard' };
   }
   if (isAdminArea && !isSuperAdmin) {
     ElMessage.warning('该区域仅限平台管理员访问');
     return { path: auth.defaultRedirect };
   }
 
-  // /merchant/* MERCHANT 和 SUPER_ADMIN 均可访问（SUPER_ADMIN 用于代登录调试）
-  if (isMerchantArea && !isMerchant && !isSuperAdmin) {
+  // P2-3 续: STAFF 角色可访问 /merchant/* 但不能访问 /admin/*
+  // 实际权限隔离由后端 RolesGuard 控制（STAFF 角色可访问 /merchant/* 路由）
+  // 前端：STAFF 没有 defaultRedirect 路由，redirect 到 /merchant/dashboard
+  if (isMerchantArea && !isMerchant && !isSuperAdmin && !roles.includes('STAFF')) {
     ElMessage.warning('该区域仅限商户访问');
     return { path: auth.defaultRedirect };
   }

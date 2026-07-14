@@ -6,7 +6,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
  * 商户自定义域名中间件
  *
  * 根据请求 Host 头查找 Shop.customDomain，把请求重写到 /shop/:shopCode/* 路径。
- * - 仅对路径以 / 开头的 GET 请求生效（避免干扰 /api/* API 请求）
+ * - 对 GET 和 POST 请求都生效（P2-13：让买家能在自定义域名下单）
  * - 跳过 /api、/payment、/assets、/_ 前缀
  * - 仅匹配已验证（domainVerified=true）的域名
  * - 已重写过的请求（带 x-shop-host-rewritten header）不再处理
@@ -18,8 +18,8 @@ export class ShopHostMiddleware implements NestMiddleware {
   constructor(private readonly prisma: PrismaService) {}
 
   async use(req: Request, res: Response, next: NextFunction): Promise<void> {
-    // 只处理普通页面请求
-    if (req.method !== 'GET') return next();
+    // P2-13: 同时处理 GET 和 POST（让买家能在自定义域名下单）
+    if (req.method !== 'GET' && req.method !== 'POST') return next();
     if (!req.path || !req.path.startsWith('/')) return next();
 
     // 跳过 API、静态资源、内部路径
@@ -51,11 +51,11 @@ export class ShopHostMiddleware implements NestMiddleware {
 
       if (shop) {
         const newPath = `/shop/${shop.code}${req.path === '/' ? '' : req.path}`;
-        this.logger.log(`[domain] ${host}${req.path} -> ${newPath}`);
+        this.logger.log(`[domain] ${req.method} ${host}${req.path} -> ${newPath}`);
         // Express URL 重写
         req.url = newPath + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '');
         req.headers['x-shop-host-rewritten'] = '1';
-        // 透传给 Vue Router
+        // 透传给 Vue Router / API Controller
         req.headers['x-original-host'] = host;
       }
     } catch (err) {

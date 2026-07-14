@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
 import { AesGcmService } from '../../infrastructure/crypto/aes-gcm.service';
+import { RedisService } from '../../infrastructure/redis/redis.service';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
 
 /**
@@ -25,6 +27,7 @@ export class DeliveryService {
     private readonly auditLog: AuditLogService,
     private readonly mail: MailService,
     private readonly crypto: AesGcmService,
+    private readonly redis: RedisService,
   ) {}
 
   @OnEvent(ORDER_PAID_EVENT)
@@ -137,9 +140,72 @@ export class DeliveryService {
     });
 
     // 发送卡密邮件（异步，不阻塞主流程）
-    this.sendDeliveryEmail(payload).catch((err) => {
+    // P2-14: 失败时入重试队列（Redis ZSET，score = 下次重试时间戳）
+    this.sendDeliveryEmail(payload).catch(async (err) => {
       this.logger.error(`卡密邮件发送失败 orderNo=${payload.orderNo}: ${(err as Error).message}`);
+      const order = await this.prisma.order.findUnique({
+        where: { id: payload.orderId },
+        select: { id: true, orderNo: true, buyerEmail: true },
+      });
+      if (!order?.buyerEmail) return;
+      const retryAt = Date.now() + 60_000; // 1 分钟后重试
+      await this.redis.zadd('email:delivery:retry', retryAt, JSON.stringify({ orderId: order.id, attempt: 1 }));
     });
+  }
+
+  /**
+   * P2-14: 卡密邮件重试 worker
+   * 每分钟扫描 Redis ZSET，取出到期的重试任务
+   * 指数退避：1min → 5min → 30min
+   * 失败 3 次后入死信队列（需要人工介入）
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async retryDeliveryEmails(): Promise<void> {
+    const now = Date.now();
+    // 取出 score <= now 的所有任务（最多 10 个/分钟）
+    const tasks = await this.redis.zrangebyscore('email:delivery:retry', 0, now, 'LIMIT', 0, 10);
+    for (const taskJson of tasks) {
+      const task = JSON.parse(taskJson) as { orderId: string; attempt: number };
+      // 先从队列移除（避免重复处理）
+      await this.redis.zrem('email:delivery:retry', taskJson);
+      try {
+        const payload: OrderPaidPayload = {
+          orderId: task.orderId,
+          orderNo: '',
+          paymentId: '',
+          channel: 'retry',
+          amount: '0',
+          paidAt: new Date(),
+        };
+        // 重新查 orderNo（payload 中空的字段）
+        const order = await this.prisma.order.findUnique({
+          where: { id: task.orderId },
+          select: { orderNo: true },
+        });
+        if (!order) continue;
+        payload.orderNo = order.orderNo;
+        await this.sendDeliveryEmail(payload);
+        this.logger.log(`卡密邮件重试成功 orderNo=${order.orderNo} attempt=${task.attempt}`);
+      } catch {
+        if (task.attempt >= 3) {
+          // 失败 3 次，入死信
+          await this.redis.zadd('email:delivery:dead', now, taskJson);
+          this.logger.error(`卡密邮件重试失败 3 次，进入死信队列 orderId=${task.orderId}`);
+        } else {
+          // 指数退避：1min, 5min, 30min
+          const delay = task.attempt === 1 ? 5 * 60_000 : 30 * 60_000;
+          const nextRetry = now + delay;
+          await this.redis.zadd(
+            'email:delivery:retry',
+            nextRetry,
+            JSON.stringify({ orderId: task.orderId, attempt: task.attempt + 1 }),
+          );
+          this.logger.warn(
+            `卡密邮件重试失败，下次重试在 ${delay / 60_000} 分钟后 orderId=${task.orderId} attempt=${task.attempt + 1}`,
+          );
+        }
+      }
+    }
   }
 
   /** 查询订单关联卡密并发邮件 */
