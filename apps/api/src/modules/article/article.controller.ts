@@ -5,20 +5,32 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, type CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { ArticleService } from './article.service';
-import { ArticleType, ArticleStatus } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// 用对象字面量替代 Prisma enum（运行时导出兼容性更好）
+const ArticleTypeObj = {
+  ANNOUNCEMENT: 'ANNOUNCEMENT',
+  AGREEMENT: 'AGREEMENT',
+  DISCLAIMER: 'DISCLAIMER',
+  ALLOWED_GOODS: 'ALLOWED_GOODS',
+} as const;
+const ArticleStatusObj = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+
 class ArticleQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) page?: number = 1;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number = 20;
-  @IsOptional() @IsEnum(ArticleType) type?: ArticleType;
-  @IsOptional() @IsEnum(ArticleStatus) status?: ArticleStatus;
+  @IsOptional() @IsEnum(ArticleTypeObj) type?: keyof typeof ArticleTypeObj;
+  @IsOptional() @IsEnum(ArticleStatusObj) status?: keyof typeof ArticleStatusObj;
 }
 
 class CreateArticleDto {
-  @IsEnum(ArticleType) type!: ArticleType;
+  @IsEnum(ArticleTypeObj) type!: keyof typeof ArticleTypeObj;
   @IsString() @MaxLength(255) title!: string;
   @IsString() content!: string;
   @IsOptional()
@@ -27,12 +39,12 @@ class CreateArticleDto {
   @Matches(/^[a-z0-9-]*$/i, { message: 'slug 只能含字母、数字、短横线' })
   slug?: string;
   @IsOptional() @IsString() @MaxLength(500) summary?: string;
-  @IsOptional() @IsEnum(ArticleStatus) status?: ArticleStatus;
+  @IsOptional() @IsEnum(ArticleStatusObj) status?: keyof typeof ArticleStatusObj;
   @IsOptional() @Type(() => Number) @IsInt() sort?: number;
 }
 
 class UpdateArticleDto {
-  @IsOptional() @IsEnum(ArticleType) type?: ArticleType;
+  @IsOptional() @IsEnum(ArticleTypeObj) type?: keyof typeof ArticleTypeObj;
   @IsOptional() @IsString() @MaxLength(255) title?: string;
   @IsOptional() @IsString() content?: string;
   @IsOptional()
@@ -41,7 +53,7 @@ class UpdateArticleDto {
   @Matches(/^[a-z0-9-]*$/i, { message: 'slug 只能含字母、数字、短横线' })
   slug?: string;
   @IsOptional() @IsString() @MaxLength(500) summary?: string;
-  @IsOptional() @IsEnum(ArticleStatus) status?: ArticleStatus;
+  @IsOptional() @IsEnum(ArticleStatusObj) status?: keyof typeof ArticleStatusObj;
   @IsOptional() @Type(() => Number) @IsInt() sort?: number;
 }
 
@@ -55,7 +67,7 @@ export class ArticleController {
   /** 已发布公告列表（按 type 过滤） */
   @Get('articles')
   @Public()
-  async list(@Query('type') type?: ArticleType) {
+  async list(@Query('type') type?: keyof typeof ArticleTypeObj) {
     return this.service.listPublished(type);
   }
 

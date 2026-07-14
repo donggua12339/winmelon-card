@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS merchant_payment_channels (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 初始化：为所有现有商户启用全部已可用通道
-INSERT INTO merchant_payment_channels (merchantId, channelCode, isEnabled)
-SELECT m.id, pc.code, pc.isAvailable
+INSERT INTO merchant_payment_channels (id, merchantId, channelCode, isEnabled)
+SELECT UUID(), m.id, pc.code, pc.isAvailable
 FROM merchants m
 CROSS JOIN payment_channels pc
 WHERE m.deletedAt IS NULL
