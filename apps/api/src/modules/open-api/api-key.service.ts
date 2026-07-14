@@ -62,7 +62,6 @@ export class ApiKeyService {
 
     const apiKey = await this.prisma.apiKey.create({
       data: {
-        key: fullKey,
         keyHash: this.hashKey(fullKey),
         keyHint,
         name: params.name,
@@ -123,33 +122,15 @@ export class ApiKeyService {
     return { id, revoked: true };
   }
 
-  /** 通过完整 key 验证，返回 payload；同时更新 lastUsedAt
-   * 优先查 keyHash（新主存储），找不到降级查明文 key（迁移期兼容）
-   */
+  /** 通过完整 key 验证，返回 payload；同时更新 lastUsedAt */
   async validate(rawKey: string): Promise<ApiKeyPayload> {
     if (!rawKey || !rawKey.startsWith('sk_live_')) {
       throw new UnauthorizedException('API Key 格式错误');
     }
     const keyHash = this.hashKey(rawKey);
-    // 优先查 hash
-    let apiKey = await this.prisma.apiKey.findUnique({
+    const apiKey = await this.prisma.apiKey.findUnique({
       where: { keyHash },
     });
-    // 降级查明文（迁移期，3 天后删除此分支）
-    if (!apiKey) {
-      apiKey = await this.prisma.apiKey.findUnique({
-        where: { key: rawKey },
-      });
-      // 若明文查到了但 keyHash 为空，回填 hash（自动迁移）
-      if (apiKey && !apiKey.keyHash) {
-        await this.prisma.apiKey
-          .update({
-            where: { id: apiKey.id },
-            data: { keyHash },
-          })
-          .catch(() => undefined);
-      }
-    }
     if (!apiKey || !apiKey.isActive) {
       throw new UnauthorizedException('API Key 无效或已吊销');
     }
