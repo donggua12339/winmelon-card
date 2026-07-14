@@ -31,6 +31,8 @@ export class ShopService {
       shopId,
       status: 'ONLINE' as const,
       deletedAt: null,
+      // 仅返回有可用库存的商品（SQL 层过滤，避免内存过滤导致分页失效）
+      stockCards: { some: { status: 'AVAILABLE' as const } },
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
     };
     const [items, total] = await Promise.all([
@@ -52,7 +54,7 @@ export class ShopService {
       this.prisma.product.count({ where }),
     ]);
 
-    // 批量查询库存数（仅 AVAILABLE）
+    // 批量查询库存数（仅 AVAILABLE）用于前端展示
     const productIds = items.map((p) => p.id);
     const stockCounts = await this.prisma.stockCard.groupBy({
       by: ['productId'],
@@ -65,15 +67,12 @@ export class ShopService {
     }
 
     return {
-      items: items
-        .map((p) => ({
-          ...p,
-          price: p.price.toString(),
-          originalPrice: p.originalPrice?.toString() ?? null,
-          stock: stockMap.get(p.id) ?? 0,
-        }))
-        // 过滤掉库存为 0 的商品（买家侧不展示）
-        .filter((p) => p.stock > 0),
+      items: items.map((p) => ({
+        ...p,
+        price: p.price.toString(),
+        originalPrice: p.originalPrice?.toString() ?? null,
+        stock: stockMap.get(p.id) ?? 0,
+      })),
       total,
       page: query.page,
       pageSize: query.pageSize,

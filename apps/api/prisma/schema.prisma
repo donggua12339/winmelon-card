@@ -31,9 +31,11 @@ model User {
   email        String         @unique @db.VarChar(255)
   passwordHash String         @db.VarChar(255)
   role         UserRole       @default(STAFF)
-  merchantId   String?        @unique
+  merchantId   String?
   merchant     Merchant?      @relation(fields: [merchantId], references: [id])
   isActive     Boolean        @default(true)
+  // token 版本号：改密/角色变更时 +1，使旧 refresh token 失效（防盗号后改密仍可刷新）
+  tokenEpoch   Int            @default(0)
   lastLoginAt  DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -42,6 +44,7 @@ model User {
   auditLogs    AuditLog[]
 
   @@index([role])
+  @@index([merchantId])
   @@map("users")
 }
 

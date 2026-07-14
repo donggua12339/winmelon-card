@@ -105,9 +105,10 @@ export class UsdtService {
     return json.data ?? [];
   }
 
-  /** 确认支付：事务更新 Payment + Order，发送 OrderPaidEvent */
+  /** 确认支付：事务更新 Payment + Order，事务提交后再发 OrderPaidEvent */
   private async confirmPayment(payment: { id: string; orderId: string }, txHash: string): Promise<void> {
     try {
+      let eventPayload: OrderPaidPayload | null = null;
       await this.prisma.$transaction(async (tx) => {
         const updated = await tx.payment.update({
           where: { id: payment.id },
@@ -126,15 +127,20 @@ export class UsdtService {
           select: { id: true, orderNo: true, shopId: true },
         });
 
-        this.eventEmitter.emit(ORDER_PAID_EVENT, {
+        eventPayload = {
           orderId: order.id,
           orderNo: order.orderNo,
           paymentId: payment.id,
           channel: 'usdt',
           amount: updated.amount.toString(),
           paidAt: new Date(),
-        } satisfies OrderPaidPayload);
+        } satisfies OrderPaidPayload;
       });
+
+      // 事务提交后再发事件，避免事务回滚后事件已发导致发卡基于未提交状态
+      if (eventPayload) {
+        this.eventEmitter.emit(ORDER_PAID_EVENT, eventPayload);
+      }
       this.logger.log(`USDT 支付确认成功：payment=${payment.id} tx=${txHash}`);
     } catch (err) {
       this.logger.error(`确认支付失败 payment=${payment.id}：${(err as Error).message}`);

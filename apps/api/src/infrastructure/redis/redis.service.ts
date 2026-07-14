@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import IORedis, { type RedisOptions } from 'ioredis';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class RedisService extends IORedis implements OnModuleDestroy {
@@ -19,15 +20,24 @@ export class RedisService extends IORedis implements OnModuleDestroy {
   }
 
   /**
-   * 原子性取锁（基于 SETNX + 过期时间）
-   * 返回 true 表示获取成功，需要在调用方 finally 中释放
+   * 原子性取锁（SETNX + 过期时间）
+   * 返回 token（非 null）表示获取成功，调用方需用同一 token 释放
+   * 返回 null 表示锁已被占用
    */
-  async acquireLock(key: string, ttlMs: number): Promise<boolean> {
-    const result = await this.set(key, '1', 'PX', ttlMs, 'NX');
-    return result === 'OK';
+  async acquireLock(key: string, ttlMs: number): Promise<string | null> {
+    const token = randomBytes(16).toString('hex');
+    const result = await this.set(key, token, 'PX', ttlMs, 'NX');
+    return result === 'OK' ? token : null;
   }
 
-  async releaseLock(key: string): Promise<void> {
-    await this.del(key);
+  /**
+   * 释放锁（Lua 脚本原子校验+删除）
+   * 仅当 key 的值等于 token 时才删除，避免误删别人的锁
+   * 返回 true 表示成功释放，false 表示锁已过期或被别人持有
+   */
+  async releaseLock(key: string, token: string): Promise<boolean> {
+    const lua = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`;
+    const result = await this.eval(lua, 1, key, token);
+    return result === 1;
   }
 }

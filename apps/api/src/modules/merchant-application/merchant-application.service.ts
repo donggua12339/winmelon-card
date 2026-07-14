@@ -40,9 +40,9 @@ export class MerchantApplicationService {
       throw new BadRequestException(`店铺码 ${dto.shopCode} 已存在`);
     }
 
-    // 2. 校验邮箱是否已注册
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.contactEmail },
+    // 2. 校验邮箱是否已注册（排除软删除用户，允许邮箱复用）
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email: dto.contactEmail, deletedAt: null },
     });
     if (existingUser) {
       throw new BadRequestException('该邮箱已注册，请直接登录或更换邮箱');

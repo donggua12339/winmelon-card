@@ -32,6 +32,15 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(prefix);
 
+  // 信任反代（Nginx 在前），让 req.ip 解析 X-Forwarded-For
+  // 仅信任 loopback 和已知代理 IP，避免攻击者伪造 XFF 绕过限流
+  const trustProxy = config.get<string>('TRUST_PROXY', 'loopback');
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance();
+  if (typeof expressInstance.set === 'function') {
+    expressInstance.set('trust proxy', trustProxy);
+  }
+
   app.enableCors({
     origin: frontendUrl.split(',').map((s) => s.trim()),
     credentials: true,

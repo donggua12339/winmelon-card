@@ -103,6 +103,12 @@ export class AuthService {
       throw new UnauthorizedException('用户已被禁用');
     }
 
+    // 校验 tokenEpoch：改密/角色变更后旧 token 立即失效
+    if (payload.epoch !== undefined && payload.epoch !== user.tokenEpoch) {
+      await this.redis.del(`refresh:${payload.jti}`);
+      throw new UnauthorizedException('凭证已失效，请重新登录');
+    }
+
     // 旋转：旧令牌失效
     await this.redis.del(`refresh:${payload.jti}`);
     return this.issueTokens(user, ctx);
@@ -147,13 +153,14 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        // tokenEpoch +1 使所有旧 refresh token 立即失效（强制重新登录）
+        tokenEpoch: { increment: 1 },
+      },
     });
 
-    // 吊销所有 refresh token（强制重新登录）
-    // 注意：这里简单粗暴，扫描所有 refresh:${userId} 的 key 难度大
-    // 实际生产可以用 Redis Hash + 用户ID 索引
-    // 简化处理：仅记录审计 + 提示前端提示重新登录
+    // 吊销所有 refresh token：通过 tokenEpoch 自动失效，无需遍历 Redis key
 
     await this.auditLog.record({
       actorId: userId,
@@ -184,6 +191,7 @@ export class AuthService {
       roles,
       merchantId: user.merchantId ?? undefined,
       type: 'access',
+      epoch: user.tokenEpoch,
     };
 
     const accessToken = await this.jwt.signAsync(payload, {

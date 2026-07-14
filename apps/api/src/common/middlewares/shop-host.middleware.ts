@@ -32,8 +32,12 @@ export class ShopHostMiddleware implements NestMiddleware {
     const host = (req.headers.host || '').toLowerCase().split(':')[0]; // 去掉端口
     if (!host) return next();
 
-    // 平台主域名不算商户域名
-    const mainDomains = ['winmelon.cn', 'www.winmelon.cn', 'localhost'];
+    // 平台主域名不算商户域名（从环境变量 MAIN_DOMAINS 读取，逗号分隔）
+    const mainDomainsEnv = process.env.MAIN_DOMAINS ?? 'winmelon.cn,www.winmelon.cn,localhost';
+    const mainDomains = mainDomainsEnv
+      .split(',')
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean);
     if (mainDomains.some((d) => host === d || host.endsWith('.' + d))) {
       // 主域下的访问保持原样
       return next();

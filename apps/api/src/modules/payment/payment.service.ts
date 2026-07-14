@@ -202,8 +202,8 @@ export class PaymentService implements OnModuleInit {
           throw new BadRequestException(`订单状态异常 orderNo=${notify.outTradeNo} status=${order.status}`);
         }
 
-        // 金额校验（防伪造）
-        if (order.totalAmount.toString() !== notify.amount) {
+        // 金额校验（防伪造，用数值比较避免 "10.00" vs "10" 字符串误判）
+        if (Number(order.totalAmount) !== Number(notify.amount)) {
           throw new BadRequestException(`金额不匹配 order=${order.totalAmount} notify=${notify.amount}`);
         }
 

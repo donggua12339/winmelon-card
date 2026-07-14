@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
 import type { Request } from 'express';
 import { THROTTLE_KEY, type ThrottleOptions } from '../decorators/throttle.decorator';
 import { RedisService } from '../../infrastructure/redis/redis.service';
@@ -17,7 +16,8 @@ import { RedisService } from '../../infrastructure/redis/redis.service';
 /**
  * 限流拦截器
  * - 默认路由无 @Throttle 装饰器时不限流（由 Nginx 全局限速兜底）
- * - 命中 @Throttle 时按 (路由 + IP) 做固定窗口计数
+ * - 命中 @Throttle 时按 (路由模板 + IP) 做固定窗口计数
+ * - 路由模板优先用 NestJS 路由 path（含 :id 参数），避免 RESTful 路径绕过限流
  */
 @Injectable()
 export class ThrottleInterceptor implements NestInterceptor {
@@ -37,9 +37,11 @@ export class ThrottleInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const req = context.switchToHttp().getRequest<Request>();
-    const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.ip ?? 'unknown';
-    const route = `${req.method}:${req.path}`;
+    const req = context.switchToHttp().getRequest<Request & { route?: { path?: string } }>();
+    // IP 优先用 req.ip（受 trust proxy 配置影响），兜底 socket remoteAddress
+    const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+    // 路由模板：优先用 Express 路由 path（含 :id），避免 /orders/123 和 /orders/456 被当作不同 key
+    const route = `${req.method}:${req.route?.path ?? req.path}`;
     const key = `throttle:${opts.keySuffix ?? route}:${ip}`;
 
     const count = await this.redis.incr(key);
@@ -59,12 +61,6 @@ export class ThrottleInterceptor implements NestInterceptor {
       );
     }
 
-    return next.handle().pipe(
-      tap({
-        error: () => {
-          // 出错不重置计数，避免攻击者通过构造 4xx 绕过限流
-        },
-      }),
-    );
+    return next.handle();
   }
 }
