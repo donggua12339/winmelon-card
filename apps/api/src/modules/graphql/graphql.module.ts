@@ -33,7 +33,7 @@ import type { JwtRequestUser } from '../auth/jwt.strategy';
             // 与 AuthService 同样的 JWT 解析（HS256 + JWT_SECRET）
             // 这里用 Node 内置 crypto 解析 payload（不验签，因为 Resolver 内部用 GqlAuthGuard 验证）
             const parts = token.split('.');
-            if (parts.length === 3) {
+            if (parts.length === 3 && parts[1]) {
               const payloadJson = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(
                 'utf8',
               );

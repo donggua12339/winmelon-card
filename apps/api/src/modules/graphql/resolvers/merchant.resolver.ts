@@ -1,24 +1,42 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from '../guards/gql-auth.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { CurrentUser } from '../decorators/current-user.decorator';
 import { MerchantType } from '../types/merchant.type';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import type { JwtRequestUser } from '../../auth/jwt.strategy';
 
 @Injectable()
 @Resolver(() => MerchantType)
 export class MerchantResolver {
   constructor(private readonly prisma: PrismaService) {}
 
-  @Query(() => MerchantType, { description: '按 code 查询商户（公开）' })
-  async merchantByCode(@Args('code') code: string): Promise<MerchantType> {
-    const m = await this.prisma.merchant.findUnique({ where: { code } });
+  /**
+   * 当前登录商户信息（需认证 + MERCHANT 角色）
+   * F6 GraphQL 鉴权 + RolesGuard 集成
+   */
+  @Query(() => MerchantType, { description: '当前登录的商户信息' })
+  @UseGuards(GqlAuthGuard)
+  @Roles('MERCHANT')
+  async me(@CurrentUser() user: JwtRequestUser): Promise<MerchantType> {
+    if (!user.userId) throw new NotFoundException('未登录');
+    const u = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { merchantId: true },
+    });
+    if (!u?.merchantId) throw new NotFoundException('当前用户未绑定商户');
+    const m = await this.prisma.merchant.findUnique({
+      where: { id: u.merchantId },
+    });
     if (!m) throw new NotFoundException('商户不存在');
     return this.toMerchantType(m);
   }
 
-  @Query(() => MerchantType, { description: '当前登录商户（简化版，无认证）' })
-  async me(): Promise<MerchantType> {
-    // 简化版：返回第一个商户（用于调试 GraphQL resolver 是否被调用）
-    const m = await this.prisma.merchant.findFirst();
+  /** 公开查询：按 code 查商户 */
+  @Query(() => MerchantType, { description: '按 code 查询商户' })
+  async merchantByCode(@Args('code') code: string): Promise<MerchantType> {
+    const m = await this.prisma.merchant.findUnique({ where: { code } });
     if (!m) throw new NotFoundException('商户不存在');
     return this.toMerchantType(m);
   }
