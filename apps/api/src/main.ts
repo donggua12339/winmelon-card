@@ -15,6 +15,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import type { NestApplication } from '@nestjs/core';
 import { json, urlencoded } from 'express';
 import { validateCriticalConfig } from './infrastructure/config/config.validator';
+import { SsrService } from './modules/shop/ssr.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestApplication>(AppModule, {
@@ -74,6 +75,33 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(cookieParser());
   app.use(RequestIdMiddleware);
+
+  // F1: SEO 静态化路由（在 NestJS 路由之前注册，绕过全局 prefix）
+  // /shop/:code 返回 SSR HTML（含 SEO meta + JSON-LD），/sitemap.xml + /robots.txt
+  // 前端 SPA 通过 location.href 接管正常访问，SEO 爬虫直接拿到 HTML
+  const ssrService = app.get(SsrService);
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.get('/shop/:code', async (req: Request, res: Response) => {
+    const code = req.params.code ?? '';
+    const html = await ssrService.renderShopPage(code);
+    if (html) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.send(html);
+    } else {
+      res.status(404).type('text/html').send('<h1>店铺不存在</h1>');
+    }
+  });
+  expressApp.get('/sitemap.xml', async (_req: Request, res: Response) => {
+    const xml = await ssrService.renderSitemap();
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  });
+  expressApp.get('/robots.txt', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(ssrService.renderRobots());
+  });
   // 商户自定义域名重写（必须在 json 解析前注册，因为它依赖原始 path）
   const prismaService = app.get(PrismaService);
   const shopHostMiddleware = new ShopHostMiddleware(prismaService);

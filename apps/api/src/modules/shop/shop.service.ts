@@ -26,6 +26,57 @@ export class ShopService {
     return shop;
   }
 
+  /**
+   * SEO 静态化：查店铺 + 商品（用于 SSR 渲染）
+   * 返回完整数据，前端 SPA 也能用
+   */
+  async findShopForSeo(code: string) {
+    const shop = await this.prisma.shop.findFirst({
+      where: { code, isOnline: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        announcement: true,
+        merchantId: true,
+        customDomain: true,
+        merchant: {
+          select: {
+            name: true,
+            contactEmail: true,
+          },
+        },
+        products: {
+          where: { status: 'ONLINE', deletedAt: null },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            originalPrice: true,
+          },
+          take: 100,
+          orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }],
+        },
+      },
+    });
+    if (!shop) {
+      throw new NotFoundException('店铺不存在或已下线');
+    }
+    return shop;
+  }
+
+  /**
+   * 列出所有在线店铺（用于 sitemap）
+   */
+  async listAllOnlineShops() {
+    return this.prisma.shop.findMany({
+      where: { isOnline: true },
+      select: { code: true, updatedAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async listProducts(shopId: string, query: { categoryId?: string; page: number; pageSize: number }) {
     const where = {
       shopId,

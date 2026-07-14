@@ -29,6 +29,7 @@ import { MerchantPaymentChannelModule } from './modules/merchant-payment-channel
 import { InviteModule } from './modules/invite/invite.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { GqlModule } from './modules/graphql/graphql.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -66,6 +67,7 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     InviteModule,
     TicketModule,
     NotificationModule,
+    GqlModule,
     HealthModule,
   ],
   providers: [

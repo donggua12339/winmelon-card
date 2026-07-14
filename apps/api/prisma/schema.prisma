@@ -70,6 +70,10 @@ model Merchant {
   // 冻结状态（投诉过多自动冻结）
   frozenReason String?  @db.Text
   frozenAt     DateTime?
+  // F3: 多层级分销 - 谁邀请了这个商户（自关联）
+  inviterMerchantId String?
+  inviter           Merchant?  @relation("MerchantTree", fields: [inviterMerchantId], references: [id], onDelete: SetNull)
+  invitees          Merchant[] @relation("MerchantTree")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
@@ -85,6 +89,7 @@ model Merchant {
   commissionsAsSource  CommissionRecord[] @relation("CommissionSource")
   receivedNotifications Notification[] @relation("NotificationRecipientMerchant")
 
+  @@index([inviterMerchantId])
   @@map("merchants")
 }
 
@@ -619,9 +624,11 @@ model CommissionRecord {
   source            Merchant @relation("CommissionSource", fields: [sourceMerchantId], references: [id])
   orderId           String?  @db.VarChar(36)
   orderNo           String?  @db.VarChar(32)
+  // F3: 多层级返佣层级（1=直接邀请人 60%，2=上级的邀请人 30%，3=再上级 10%）
+  level             Int      @default(1)
   // 返佣基数（商户利润 = 售价 - 成本，MVP 用订单金额 * 平台抽成率 简化）
   baseAmount        Decimal  @db.Decimal(12,2)
-  // 返佣比例（平台全局配置）
+  // 返佣比例（该层级对应的比例）
   rate              Decimal  @db.Decimal(5,4)
   // 返佣金额 = baseAmount * rate
   amount            Decimal  @db.Decimal(12,2)

@@ -203,30 +203,55 @@ export class InviteService {
     if (!invite) return;
 
     const sourceMerchantId = order.shop.merchantId;
-    const inviterMerchantId = invite.inviterMerchantId;
+    let currentInviterId: string | null = invite.inviterMerchantId;
 
     // 防自邀
-    if (sourceMerchantId === inviterMerchantId) {
+    if (sourceMerchantId === currentInviterId) {
       this.logger.warn(`自邀拦截: orderNo=${order.orderNo} merchantId=${sourceMerchantId}`);
       return;
     }
 
-    // 查平台返佣比例（system_configs）
-    const rateConfig = await this.prisma.systemConfig.findUnique({
-      where: { key: SYSTEM_CONFIG_KEY },
-    });
-    const rate = rateConfig ? Number(rateConfig.value) : DEFAULT_COMMISSION_RATE;
-    if (rate <= 0 || rate > 1) {
-      this.logger.warn(`返佣比例异常: ${rate}，跳过`);
-      return;
+    // F3: 查平台各层级返佣比例（system_configs：commission_level_1/2/3_rate）
+    const rates: number[] = [];
+    for (let level = 1; level <= 3; level++) {
+      const config = await this.prisma.systemConfig.findUnique({
+        where: { key: `commission_level_${level}_rate` },
+      });
+      rates.push(config ? Number(config.value) : 0);
+    }
+    // 兼容旧配置：单层 commission_rate 用作 1级
+    if (rates[0] === 0) {
+      const legacy = await this.prisma.systemConfig.findUnique({
+        where: { key: SYSTEM_CONFIG_KEY },
+      });
+      rates[0] = legacy ? Number(legacy.value) : DEFAULT_COMMISSION_RATE;
     }
 
     // MVP 简化：baseAmount = 订单金额（未来改为商户利润 = 订单金额 - 成本 - 平台抽成）
     const baseAmount = Number(order.totalAmount);
-    const amount = +(baseAmount * rate).toFixed(2);
-    if (amount <= 0) return;
+    if (baseAmount <= 0) return;
 
-    // 事务：写返佣记录 + 扣 source balance + 加 inviter balance + 邀请码 usedCount++
+    // 计算多层级返佣链
+    // 1级：inviteCode.inviterMerchantId
+    // 2级：inviter.inviterMerchantId（merchant.inviterMerchantId）
+    // 3级：再上一级
+    const levels: Array<{ level: number; inviterId: string; rate: number }> = [];
+    for (let level = 1; level <= 3; level++) {
+      const rate = rates[level - 1] ?? 0;
+      if (!currentInviterId || rate <= 0) break;
+      if (currentInviterId === sourceMerchantId) break; // 防自邀
+      levels.push({ level, inviterId: currentInviterId, rate });
+      // 找上级的邀请人
+      const upper: { inviterMerchantId: string | null } | null = await this.prisma.merchant.findUnique({
+        where: { id: currentInviterId },
+        select: { inviterMerchantId: true },
+      });
+      currentInviterId = upper?.inviterMerchantId ?? null;
+    }
+
+    if (levels.length === 0) return;
+
+    // 事务：每级创建 CommissionRecord + balance 更新
     await this.prisma.$transaction(async (tx) => {
       // 幂等：检查是否已结算
       const existing = await tx.commissionRecord.findFirst({
@@ -235,42 +260,51 @@ export class InviteService {
       });
       if (existing) return;
 
-      await tx.commissionRecord.create({
-        data: {
-          inviterMerchantId,
-          sourceMerchantId,
-          orderId: order.id,
-          orderNo: order.orderNo,
-          baseAmount: new Prisma.Decimal(baseAmount),
-          rate: new Prisma.Decimal(rate),
-          amount: new Prisma.Decimal(amount),
-          status: 'SETTLED',
-        },
-      });
+      let totalCommission = 0;
+      for (const { level, inviterId, rate } of levels) {
+        const amount = +(baseAmount * rate).toFixed(2);
+        if (amount <= 0) continue;
+        totalCommission += amount;
 
-      // source 商户扣减（允许负数，MVP 阶段商户利润 = 订单金额，返佣从利润出）
-      await tx.merchant.update({
-        where: { id: sourceMerchantId },
-        data: { balance: { decrement: new Prisma.Decimal(amount) } },
-      });
+        await tx.commissionRecord.create({
+          data: {
+            inviterMerchantId: inviterId,
+            sourceMerchantId,
+            orderId: order.id,
+            orderNo: order.orderNo,
+            level,
+            baseAmount: new Prisma.Decimal(baseAmount),
+            rate: new Prisma.Decimal(rate),
+            amount: new Prisma.Decimal(amount),
+            status: 'SETTLED',
+          },
+        });
 
-      // inviter 商户增加
-      await tx.merchant.update({
-        where: { id: inviterMerchantId },
-        data: { balance: { increment: new Prisma.Decimal(amount) } },
-      });
+        // source 商户扣减（返佣从商户利润出，允许负数）
+        await tx.merchant.update({
+          where: { id: sourceMerchantId },
+          data: { balance: { decrement: new Prisma.Decimal(amount) } },
+        });
+
+        // inviter 商户增加
+        await tx.merchant.update({
+          where: { id: inviterId },
+          data: { balance: { increment: new Prisma.Decimal(amount) } },
+        });
+      }
 
       // 邀请码 usedCount++
       await tx.inviteCode.update({
         where: { id: invite.id },
         data: { usedCount: { increment: 1 } },
       });
+
+      this.logger.log(`返佣结算成功: orderNo=${order.orderNo} 共 ${levels.length} 级, 总额 ¥${totalCommission}`);
+
+      // 通知 1级邀请人
+      const firstLevel = levels[0]!;
+      void this.trigger.notifyCommissionEarned(firstLevel.inviterId, totalCommission, order.shop.merchant.name);
     });
-
-    this.logger.log(`返佣结算成功: orderNo=${order.orderNo} inviter=${inviterMerchantId} amount=${amount}`);
-
-    // 触发站内信：通知邀请人获得返佣
-    void this.trigger.notifyCommissionEarned(inviterMerchantId, amount, order.shop.merchant.name);
   }
 
   // ============== 定时任务：订单退款时冲正返佣 ==============

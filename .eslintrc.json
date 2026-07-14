@@ -1,5 +1,13 @@
 {
   "root": true,
   "extends": ["eslint:recommended"],
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"]
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
+  "overrides": [
+    {
+      "files": ["apps/api/src/modules/graphql/**/*.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ]
 }
