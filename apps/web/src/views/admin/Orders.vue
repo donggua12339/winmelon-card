@@ -108,19 +108,22 @@ onMounted(fetchList);
 </script>
 
 <template>
-  <div>
-    <div class="toolbar">
-      <h2>订单管理</h2>
+  <div class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">订单管理</h2>
+        <p class="page-desc">查看订单详情、状态与手动补发</p>
+      </div>
       <div class="actions">
         <el-input
           v-model="keyword"
           placeholder="订单号/邮箱"
           clearable
-          style="width: 200px"
+          style="width: 220px"
           @clear="fetchList"
           @keyup.enter="fetchList"
         />
-        <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 120px" @change="fetchList">
+        <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 130px" @change="fetchList">
           <el-option label="待支付" value="PENDING" />
           <el-option label="已支付" value="PAID" />
           <el-option label="已发卡" value="DELIVERED" />
@@ -128,47 +131,51 @@ onMounted(fetchList);
         </el-select>
         <el-button @click="fetchList">刷新</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-table v-loading="loading" :data="list" border>
-      <el-table-column prop="orderNo" label="订单号" min-width="180" />
-      <el-table-column prop="buyerEmail" label="买家邮箱" min-width="180" />
-      <el-table-column label="商品" min-width="200">
-        <template #default="{ row }">
-          <span v-for="(it, i) in row.items" :key="i">
-            {{ it.productName }} x{{ it.quantity }}<span v-if="i < row.items.length - 1">，</span>
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="totalAmount" label="金额" width="100">
-        <template #default="{ row }">¥{{ row.totalAmount }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="statusTag(row.status).type as any">{{ statusTag(row.status).text }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createdAt" label="下单时间" width="170">
-        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openDetail(row.id)">详情</el-button>
-          <el-button v-if="row.status === 'PAID'" link type="warning" size="small" @click="onRetry(row.id)">
-            手动补发
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <section class="panel">
+      <el-table v-loading="loading" :data="list" :border="false" stripe>
+        <el-table-column prop="orderNo" label="订单号" min-width="180" />
+        <el-table-column prop="buyerEmail" label="买家邮箱" min-width="180" />
+        <el-table-column label="商品" min-width="200">
+          <template #default="{ row }">
+            <span v-for="(it, i) in row.items" :key="i">
+              {{ it.productName }} x{{ it.quantity }}<span v-if="i < row.items.length - 1">,</span>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalAmount" label="金额" width="100">
+          <template #default="{ row }">
+            <span class="amount">¥{{ row.totalAmount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="statusTag(row.status).type as any">{{ statusTag(row.status).text }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="下单时间" width="170">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="openDetail(row.id)">详情</el-button>
+            <el-button v-if="row.status === 'PAID'" link type="warning" size="small" @click="onRetry(row.id)">
+              手动补发
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-pagination
-      v-model:current-page="page"
-      v-model:page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      style="margin-top: 16px"
-      @current-change="fetchList"
-    />
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        layout="total, prev, pager, next"
+        class="pagination"
+        @current-change="fetchList"
+      />
+    </section>
 
     <el-dialog v-model="detailVisible" title="订单详情" width="640px">
       <div v-loading="detailLoading">
@@ -179,20 +186,22 @@ onMounted(fetchList);
               <el-tag :type="statusTag(detail.status).type as any">{{ statusTag(detail.status).text }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="买家邮箱">{{ detail.buyerEmail }}</el-descriptions-item>
-            <el-descriptions-item label="金额">¥{{ detail.totalAmount }}</el-descriptions-item>
+            <el-descriptions-item label="金额">
+              <span class="amount">¥{{ detail.totalAmount }}</span>
+            </el-descriptions-item>
             <el-descriptions-item label="下单时间">{{ formatTime(detail.createdAt) }}</el-descriptions-item>
             <el-descriptions-item label="超时时间">{{ formatTime(detail.expireAt) }}</el-descriptions-item>
             <el-descriptions-item label="支付时间">{{ formatTime(detail.paidAt) }}</el-descriptions-item>
             <el-descriptions-item label="发卡时间">{{ formatTime(detail.deliveredAt) }}</el-descriptions-item>
           </el-descriptions>
 
-          <h4 style="margin-top: 16px">卡密（{{ detail.stockCards.length }}）</h4>
+          <h4 class="subsection-title">卡密（{{ detail.stockCards.length }}）</h4>
           <el-table :data="detail.stockCards" border size="small">
             <el-table-column prop="id" label="卡密ID" min-width="200" />
             <el-table-column prop="status" label="状态" width="100" />
           </el-table>
 
-          <h4 style="margin-top: 16px">支付记录</h4>
+          <h4 class="subsection-title">支付记录</h4>
           <el-table :data="detail.payments" border size="small">
             <el-table-column prop="channel" label="通道" width="100" />
             <el-table-column prop="amount" label="金额" width="100">
@@ -214,14 +223,63 @@ onMounted(fetchList);
 </template>
 
 <style scoped>
-.toolbar {
+.admin-page {
+  max-width: var(--wm-container-max);
+  margin: 0 auto;
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: var(--wm-space-lg);
+  margin-bottom: var(--wm-space-xl);
+  flex-wrap: wrap;
 }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.page-desc {
+  color: var(--wm-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wm-space-sm);
+}
+
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
+}
+
+.pagination {
+  margin-top: var(--wm-space-lg);
+  justify-content: flex-end;
+  display: flex;
+}
+
+.amount {
+  font-weight: 600;
+  color: var(--wm-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.subsection-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-text-primary);
+  margin: var(--wm-space-lg) 0 var(--wm-space-sm);
 }
 </style>

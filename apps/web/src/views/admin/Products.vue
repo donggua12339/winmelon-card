@@ -211,73 +211,83 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <div class="toolbar">
-      <h2>商品管理</h2>
+  <div class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">商品管理</h2>
+        <p class="page-desc">管理店铺商品、库存与上下架状态</p>
+      </div>
       <div class="actions">
         <el-input
           v-model="keyword"
           placeholder="搜索商品名"
           clearable
-          style="width: 200px"
+          style="width: 220px"
           @clear="fetchList"
           @keyup.enter="fetchList"
         />
         <el-button @click="fetchList">刷新</el-button>
         <el-button type="primary" @click="openCreate">+ 新建商品</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-table v-loading="loading" :data="list" border>
-      <el-table-column prop="name" label="商品名" min-width="180" />
-      <el-table-column prop="price" label="价格(元)" width="100">
-        <template #default="{ row }">¥{{ row.price }}</template>
-      </el-table-column>
-      <el-table-column label="库存" width="140">
-        <template #default="{ row }">
-          <span :class="{ 'low-stock': row.stock.available === 0 }"> 可用 {{ row.stock.available }} </span>
-          / 锁 {{ row.stock.locked }} / 售 {{ row.stock.sold }}
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="statusTag(row.status).type">{{ statusTag(row.status).text }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="SeekAll" width="100">
-        <template #default="{ row }">
-          <el-tag v-if="row.seekallTier" type="success" size="small">{{ row.seekallTier }}</el-tag>
-          <span v-else style="color: #94a3b8">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="sort" label="排序" width="80" />
-      <el-table-column prop="createdAt" label="创建时间" width="170">
-        <template #default="{ row }">{{ new Date(row.createdAt).toLocaleString() }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openEdit(row as Product)">编辑</el-button>
-          <el-button
-            link
-            :type="row.status === 'ONLINE' ? 'warning' : 'success'"
-            size="small"
-            @click="toggleStatus(row as Product)"
-          >
-            {{ row.status === 'ONLINE' ? '下架' : '上架' }}
-          </el-button>
-          <el-button link type="danger" size="small" @click="onDelete(row as Product)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <section class="panel">
+      <el-table v-loading="loading" :data="list" :border="false" stripe>
+        <el-table-column prop="name" label="商品名" min-width="180" />
+        <el-table-column prop="price" label="价格" width="100">
+          <template #default="{ row }">
+            <span class="amount">¥{{ row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="库存" width="160">
+          <template #default="{ row }">
+            <span :class="{ 'low-stock': row.stock.available === 0 }">可用 {{ row.stock.available }}</span>
+            <span class="stock-sep">·</span>
+            <span class="stock-secondary">锁 {{ row.stock.locked }}</span>
+            <span class="stock-sep">·</span>
+            <span class="stock-secondary">售 {{ row.stock.sold }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="statusTag(row.status).type">{{ statusTag(row.status).text }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="SeekAll" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.seekallTier" type="success" size="small">{{ row.seekallTier }}</el-tag>
+            <span v-else class="text-tertiary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序" width="80" />
+        <el-table-column prop="createdAt" label="创建时间" width="170">
+          <template #default="{ row }">{{ new Date(row.createdAt).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="openEdit(row as Product)">编辑</el-button>
+            <el-button
+              link
+              :type="row.status === 'ONLINE' ? 'warning' : 'success'"
+              size="small"
+              @click="toggleStatus(row as Product)"
+            >
+              {{ row.status === 'ONLINE' ? '下架' : '上架' }}
+            </el-button>
+            <el-button link type="danger" size="small" @click="onDelete(row as Product)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-pagination
-      v-model:current-page="page"
-      v-model:page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      style="margin-top: 16px"
-      @current-change="fetchList"
-    />
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        layout="total, prev, pager, next"
+        class="pagination"
+        @current-change="fetchList"
+      />
+    </section>
 
     <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新建商品' : '编辑商品'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
@@ -291,7 +301,7 @@ onMounted(() => {
             >
               <div style="display: flex; justify-content: space-between; gap: 12px">
                 <span>{{ shop.merchant.name }} / {{ shop.name }}</span>
-                <span style="color: #94a3b8; font-size: 12px">/{{ shop.code }}</span>
+                <span class="shop-code">/{{ shop.code }}</span>
               </div>
             </el-option>
           </el-select>
@@ -338,24 +348,87 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.toolbar {
+.admin-page {
+  max-width: var(--wm-container-max);
+  margin: 0 auto;
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: var(--wm-space-lg);
+  margin-bottom: var(--wm-space-xl);
+  flex-wrap: wrap;
 }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.page-desc {
+  color: var(--wm-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wm-space-sm);
 }
+
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
+}
+
+.pagination {
+  margin-top: var(--wm-space-lg);
+  justify-content: flex-end;
+  display: flex;
+}
+
+.amount {
+  font-weight: 600;
+  color: var(--wm-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .low-stock {
-  color: #f56c6c;
-  font-weight: bold;
+  color: var(--wm-accent-danger);
+  font-weight: 600;
 }
+
+.stock-sep {
+  margin: 0 4px;
+  color: var(--wm-text-tertiary);
+}
+
+.stock-secondary {
+  color: var(--wm-text-tertiary);
+  font-size: 13px;
+}
+
+.text-tertiary {
+  color: var(--wm-text-tertiary);
+}
+
+.shop-code {
+  color: var(--wm-text-tertiary);
+  font-size: 12px;
+}
+
 .form-item-tip {
   margin-top: 4px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--wm-text-secondary);
   line-height: 1.5;
 }
 </style>

@@ -2,12 +2,15 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import { get } from '@/api/http';
+import { useThemeStore } from '@/stores/theme';
+
+const themeStore = useThemeStore();
 
 interface Stat {
   label: string;
   value: string;
-  icon: string;
-  glow: string;
+  icon: 'orders' | 'gmv' | 'products' | 'total';
+  accent: 'primary' | 'success' | 'warning' | 'secondary';
 }
 interface ProductList {
   items: unknown[];
@@ -32,10 +35,10 @@ interface StatusItem {
 }
 
 const stats = ref<Stat[]>([
-  { label: '今日订单', value: '-', icon: '🛒', glow: 'glow-purple' },
-  { label: '今日 GMV', value: '-', icon: '💰', glow: 'glow-cyan' },
-  { label: '商品总数', value: '-', icon: '📦', glow: 'glow-pink' },
-  { label: '订单总数', value: '-', icon: '📊', glow: 'glow-purple' },
+  { label: '今日订单', value: '-', icon: 'orders', accent: 'primary' },
+  { label: '今日 GMV', value: '-', icon: 'gmv', accent: 'success' },
+  { label: '商品总数', value: '-', icon: 'products', accent: 'warning' },
+  { label: '订单总数', value: '-', icon: 'total', accent: 'secondary' },
 ]);
 
 const loading = ref(false);
@@ -49,6 +52,28 @@ const statusChart = ref<echarts.ECharts | null>(null);
 const trendEl = ref<HTMLDivElement | null>(null);
 const productEl = ref<HTMLDivElement | null>(null);
 const statusEl = ref<HTMLDivElement | null>(null);
+
+/** 从 CSS 变量读颜色，让 echarts 跟随主题 */
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#635BFF';
+}
+
+/** 主题相关色集合 */
+function chartColors() {
+  return {
+    text: cssVar('--wm-text-secondary'),
+    textStrong: cssVar('--wm-text-primary'),
+    textTertiary: cssVar('--wm-text-tertiary'),
+    border: cssVar('--wm-border-default'),
+    primary: cssVar('--wm-accent-primary'),
+    secondary: cssVar('--wm-accent-secondary'),
+    tertiary: cssVar('--wm-accent-tertiary'),
+    success: cssVar('--wm-accent-success'),
+    warning: cssVar('--wm-accent-warning'),
+    danger: cssVar('--wm-accent-danger'),
+    bgCard: cssVar('--wm-bg-card'),
+  };
+}
 
 async function fetchStats(): Promise<void> {
   loading.value = true;
@@ -66,10 +91,10 @@ async function fetchStats(): Promise<void> {
       .reduce((sum, o) => sum + Number(o.totalAmount), 0);
 
     stats.value = [
-      { label: '今日订单', value: String(todayOrders.length), icon: '🛒', glow: 'glow-purple' },
-      { label: '今日 GMV', value: `¥${todayGmv.toFixed(2)}`, icon: '💰', glow: 'glow-cyan' },
-      { label: '商品总数', value: String(products.total), icon: '📦', glow: 'glow-pink' },
-      { label: '订单总数', value: String(orders.total), icon: '📊', glow: 'glow-purple' },
+      { label: '今日订单', value: String(todayOrders.length), icon: 'orders', accent: 'primary' },
+      { label: '今日 GMV', value: `¥${todayGmv.toFixed(2)}`, icon: 'gmv', accent: 'success' },
+      { label: '商品总数', value: String(products.total), icon: 'products', accent: 'warning' },
+      { label: '订单总数', value: String(orders.total), icon: 'total', accent: 'secondary' },
     ];
   } finally {
     loading.value = false;
@@ -100,27 +125,35 @@ function renderTrend(series: { date: string; orders: number; gmv: number }[]): v
   if (!trendChart.value) {
     trendChart.value = echarts.init(trendEl.value);
   }
+  const c = chartColors();
   trendChart.value.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['订单数', 'GMV'], textStyle: { color: '#cbd5e1' } },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: c.bgCard,
+      borderColor: c.border,
+      textStyle: { color: c.textStrong },
+    },
+    legend: { data: ['订单数', 'GMV'], textStyle: { color: c.text }, top: 0 },
     grid: { left: 40, right: 50, top: 40, bottom: 30 },
     xAxis: {
       type: 'category',
       data: series.map((s) => s.date.slice(5)),
-      axisLabel: { color: '#94a3b8' },
-      axisLine: { lineStyle: { color: '#475569' } },
+      axisLabel: { color: c.textTertiary },
+      axisLine: { lineStyle: { color: c.border } },
     },
     yAxis: [
       {
         type: 'value',
         name: '订单数',
-        axisLabel: { color: '#94a3b8' },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        nameTextStyle: { color: c.textTertiary },
+        axisLabel: { color: c.textTertiary },
+        splitLine: { lineStyle: { color: c.border, type: 'dashed' } },
       },
       {
         type: 'value',
         name: 'GMV (¥)',
-        axisLabel: { color: '#94a3b8' },
+        nameTextStyle: { color: c.textTertiary },
+        axisLabel: { color: c.textTertiary },
         splitLine: { show: false },
       },
     ],
@@ -131,8 +164,8 @@ function renderTrend(series: { date: string; orders: number; gmv: number }[]): v
         data: series.map((s) => s.orders),
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#7c3aed' },
-            { offset: 1, color: '#06b6d4' },
+            { offset: 0, color: c.primary },
+            { offset: 1, color: c.secondary },
           ]),
           borderRadius: [4, 4, 0, 0],
         },
@@ -143,12 +176,12 @@ function renderTrend(series: { date: string; orders: number; gmv: number }[]): v
         yAxisIndex: 1,
         data: series.map((s) => s.gmv),
         smooth: true,
-        lineStyle: { color: '#f472b6', width: 3 },
-        itemStyle: { color: '#f472b6' },
+        lineStyle: { color: c.tertiary, width: 3 },
+        itemStyle: { color: c.tertiary },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(244,114,182,0.3)' },
-            { offset: 1, color: 'rgba(244,114,182,0)' },
+            { offset: 0, color: `${c.tertiary}40` },
+            { offset: 1, color: `${c.tertiary}00` },
           ]),
         },
       },
@@ -161,20 +194,27 @@ function renderProducts(data: TopProduct[]): void {
   if (!productChart.value) {
     productChart.value = echarts.init(productEl.value);
   }
+  const c = chartColors();
   const reversed = [...data].reverse();
   productChart.value.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: c.bgCard,
+      borderColor: c.border,
+      textStyle: { color: c.textStrong },
+    },
     grid: { left: 120, right: 30, top: 20, bottom: 30 },
     xAxis: {
       type: 'value',
-      axisLabel: { color: '#94a3b8' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      axisLabel: { color: c.textTertiary },
+      splitLine: { lineStyle: { color: c.border, type: 'dashed' } },
     },
     yAxis: {
       type: 'category',
       data: reversed.map((d) => d.name),
-      axisLabel: { color: '#cbd5e1', fontSize: 12 },
-      axisLine: { lineStyle: { color: '#475569' } },
+      axisLabel: { color: c.text, fontSize: 12 },
+      axisLine: { lineStyle: { color: c.border } },
     },
     series: [
       {
@@ -182,8 +222,8 @@ function renderProducts(data: TopProduct[]): void {
         data: reversed.map((d) => d.quantity),
         itemStyle: {
           color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
-            { offset: 0, color: '#06b6d4' },
-            { offset: 1, color: '#7c3aed' },
+            { offset: 0, color: c.secondary },
+            { offset: 1, color: c.primary },
           ]),
           borderRadius: [0, 4, 4, 0],
         },
@@ -197,13 +237,14 @@ function renderStatus(data: StatusItem[]): void {
   if (!statusChart.value) {
     statusChart.value = echarts.init(statusEl.value);
   }
+  const c = chartColors();
   const colorMap: Record<string, string> = {
-    PENDING: '#fbbf24',
-    PAID: '#06b6d4',
-    DELIVERED: '#34d399',
-    EXPIRED: '#64748b',
-    REFUNDED: '#f87171',
-    CLOSED: '#475569',
+    PENDING: c.warning,
+    PAID: c.secondary,
+    DELIVERED: c.success,
+    EXPIRED: c.textTertiary,
+    REFUNDED: c.danger,
+    CLOSED: c.textTertiary,
   };
   const labelMap: Record<string, string> = {
     PENDING: '待支付',
@@ -214,12 +255,18 @@ function renderStatus(data: StatusItem[]): void {
     CLOSED: '已关闭',
   };
   statusChart.value.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)',
+      backgroundColor: c.bgCard,
+      borderColor: c.border,
+      textStyle: { color: c.textStrong },
+    },
     legend: {
       orient: 'vertical',
       right: 10,
       top: 'center',
-      textStyle: { color: '#cbd5e1' },
+      textStyle: { color: c.text },
     },
     series: [
       {
@@ -227,12 +274,12 @@ function renderStatus(data: StatusItem[]): void {
         radius: ['45%', '75%'],
         center: ['40%', '50%'],
         avoidLabelOverlap: true,
-        itemStyle: { borderColor: '#0f1424', borderWidth: 2 },
-        label: { color: '#cbd5e1' },
+        itemStyle: { borderColor: c.bgCard, borderWidth: 2 },
+        label: { color: c.text },
         data: data.map((d) => ({
           name: labelMap[d.status] ?? d.status,
           value: d.count,
-          itemStyle: { color: colorMap[d.status] ?? '#7c3aed' },
+          itemStyle: { color: colorMap[d.status] ?? c.primary },
         })),
       },
     ],
@@ -245,11 +292,24 @@ function resizeAll(): void {
   statusChart.value?.resize();
 }
 
+/** 主题切换时重新渲染所有图表（echarts 不会自动跟随 CSS 变量） */
+function rerenderAll(): void {
+  if (topProducts.value.length) renderProducts(topProducts.value);
+  if (statusData.value.length) renderStatus(statusData.value);
+  // 趋势图数据没存,简单 reload
+  fetchTrend();
+}
+
 watch(trendDays, () => {
   fetchTrend();
   fetchTopProducts();
   fetchStatus();
 });
+
+watch(
+  () => themeStore.theme.value,
+  () => nextTick(rerenderAll),
+);
 
 onMounted(async () => {
   await fetchStats();
@@ -268,25 +328,93 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-loading="loading" class="dashboard">
-    <div class="page-header">
-      <h2>数据看板</h2>
-      <p class="page-desc">实时关注店铺运营状况</p>
-    </div>
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">数据看板</h2>
+        <p class="page-desc">实时关注店铺运营状况</p>
+      </div>
+    </header>
 
     <!-- 数据卡片 -->
     <div class="stats-grid">
-      <div v-for="(s, i) in stats" :key="i" class="glass stat-card" :class="s.glow">
-        <div class="stat-icon">{{ s.icon }}</div>
+      <div v-for="(s, i) in stats" :key="i" class="stat-card" :class="`stat-${s.accent}`">
+        <div class="stat-icon-wrap">
+          <!-- orders -->
+          <svg
+            v-if="s.icon === 'orders'"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <!-- gmv -->
+          <svg
+            v-else-if="s.icon === 'gmv'"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          <!-- products -->
+          <svg
+            v-else-if="s.icon === 'products'"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+            ></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+          <!-- total -->
+          <svg
+            v-else
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
         <div class="stat-info">
           <div class="stat-label">{{ s.label }}</div>
-          <div class="stat-value num-highlight">{{ s.value }}</div>
+          <div class="stat-value">{{ s.value }}</div>
         </div>
       </div>
     </div>
 
     <!-- 时间范围切换 -->
     <div class="range-bar">
-      <span class="range-label">数据范围：</span>
+      <span class="range-label">数据范围</span>
       <el-radio-group v-model="trendDays" size="small">
         <el-radio-button :value="7">近 7 天</el-radio-button>
         <el-radio-button :value="14">近 14 天</el-radio-button>
@@ -295,60 +423,130 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 趋势图 -->
-    <div class="glass chart-card">
-      <h3 class="chart-title">订单 / GMV 趋势</h3>
+    <section class="panel">
+      <h3 class="panel-title">订单 / GMV 趋势</h3>
       <div ref="trendEl" class="chart-box" style="height: 320px"></div>
-    </div>
+    </section>
 
     <!-- 双列：销量排行 + 状态分布 -->
     <div class="dual-grid">
-      <div class="glass chart-card">
-        <h3 class="chart-title">商品销量 Top 10</h3>
+      <section class="panel">
+        <h3 class="panel-title">商品销量 Top 10</h3>
         <div ref="productEl" class="chart-box" style="height: 360px"></div>
         <div v-if="topProducts.length === 0" class="empty-tip">暂无数据</div>
-      </div>
-      <div class="glass chart-card">
-        <h3 class="chart-title">订单状态分布</h3>
+      </section>
+      <section class="panel">
+        <h3 class="panel-title">订单状态分布</h3>
         <div ref="statusEl" class="chart-box" style="height: 360px"></div>
         <div v-if="statusData.length === 0" class="empty-tip">暂无数据</div>
-      </div>
+      </section>
     </div>
 
     <!-- 快捷操作 -->
-    <div class="section">
+    <section class="section">
       <h3 class="section-title">快捷操作</h3>
       <div class="actions-grid">
-        <RouterLink to="/admin/products" class="glass action-card">
-          <span class="action-icon">📦</span><span class="action-text">商品管理</span>
+        <RouterLink to="/admin/products" class="action-card">
+          <span class="action-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+              ></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </span>
+          <span class="action-text">商品管理</span>
         </RouterLink>
-        <RouterLink to="/admin/stock" class="glass action-card">
-          <span class="action-icon">🔑</span><span class="action-text">导入卡密</span>
+        <RouterLink to="/admin/stock" class="action-card">
+          <span class="action-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+              ></path>
+            </svg>
+          </span>
+          <span class="action-text">导入卡密</span>
         </RouterLink>
-        <RouterLink to="/admin/orders" class="glass action-card">
-          <span class="action-icon">🛒</span><span class="action-text">订单管理</span>
+        <RouterLink to="/admin/orders" class="action-card">
+          <span class="action-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+          </span>
+          <span class="action-text">订单管理</span>
         </RouterLink>
-        <RouterLink to="/admin/audit-logs" class="glass action-card">
-          <span class="action-icon">📋</span><span class="action-text">审计日志</span>
+        <RouterLink to="/admin/audit-logs" class="action-card">
+          <span class="action-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </span>
+          <span class="action-text">审计日志</span>
         </RouterLink>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
 .dashboard {
-  max-width: 1200px;
+  max-width: var(--wm-container-max);
   margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--wm-space-xl);
 }
 
-.page-header h2 {
+.page-title {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .page-desc {
@@ -360,32 +558,56 @@ onBeforeUnmount(() => {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--wm-space-md);
+  margin-bottom: var(--wm-space-xl);
 }
 
 .stat-card {
-  padding: 24px;
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
   display: flex;
   align-items: center;
-  gap: 16px;
-  transition: all 0.4s ease;
+  gap: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
+  box-shadow: var(--wm-shadow-md);
+  border-color: var(--wm-border-hover);
+  transform: translateY(-1px);
 }
 
-.stat-icon {
-  width: 56px;
-  height: 56px;
+.stat-icon-wrap {
+  width: 44px;
+  height: 44px;
   border-radius: var(--wm-radius-md);
-  background: var(--wm-glass-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
   flex-shrink: 0;
+}
+
+.stat-primary .stat-icon-wrap {
+  background: color-mix(in srgb, var(--wm-accent-primary) 12%, transparent);
+  color: var(--wm-accent-primary);
+}
+.stat-success .stat-icon-wrap {
+  background: color-mix(in srgb, var(--wm-accent-success) 12%, transparent);
+  color: var(--wm-accent-success);
+}
+.stat-warning .stat-icon-wrap {
+  background: color-mix(in srgb, var(--wm-accent-warning) 12%, transparent);
+  color: var(--wm-accent-warning);
+}
+.stat-secondary .stat-icon-wrap {
+  background: color-mix(in srgb, var(--wm-accent-secondary) 12%, transparent);
+  color: var(--wm-accent-secondary);
 }
 
 .stat-info {
@@ -397,36 +619,47 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: var(--wm-text-secondary);
   margin-bottom: 4px;
+  font-weight: 500;
 }
 
 .stat-value {
   font-size: 28px;
   line-height: 1;
+  color: var(--wm-text-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .range-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--wm-space-md);
+  margin-bottom: var(--wm-space-md);
 }
 
 .range-label {
   color: var(--wm-text-secondary);
   font-size: 13px;
+  font-weight: 500;
 }
 
-.chart-card {
-  padding: 20px;
-  margin-bottom: 24px;
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
+  margin-bottom: var(--wm-space-xl);
   position: relative;
+  box-shadow: var(--wm-shadow-sm);
 }
 
-.chart-title {
-  font-size: 16px;
+.panel-title {
+  font-size: 15px;
   font-weight: 600;
   color: var(--wm-text-primary);
-  margin: 0 0 16px;
+  margin: 0 0 var(--wm-space-md);
+  letter-spacing: -0.005em;
 }
 
 .chart-box {
@@ -436,8 +669,8 @@ onBeforeUnmount(() => {
 .dual-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--wm-space-md);
+  margin-bottom: var(--wm-space-xl);
 }
 
 .empty-tip {
@@ -450,39 +683,51 @@ onBeforeUnmount(() => {
 }
 
 .section {
-  margin-bottom: 32px;
+  margin-bottom: var(--wm-space-2xl);
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--wm-text-primary);
-  margin: 0 0 16px;
+  margin: 0 0 var(--wm-space-md);
 }
 
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--wm-space-md);
 }
 
 .action-card {
-  padding: 20px;
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-md);
+  padding: var(--wm-space-lg);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--wm-space-md);
   text-decoration: none;
   color: var(--wm-text-primary);
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 .action-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--wm-border-glass-hover);
+  background: var(--wm-bg-hover);
+  border-color: var(--wm-border-hover);
+  transform: translateY(-1px);
 }
 
 .action-icon {
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--wm-radius-sm);
+  background: color-mix(in srgb, var(--wm-accent-primary) 10%, transparent);
+  color: var(--wm-accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .action-text {
