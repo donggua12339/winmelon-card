@@ -58,10 +58,16 @@ function goBack(): void {
 </script>
 
 <template>
-  <div class="change-password">
-    <h2 class="page-title">修改密码</h2>
-    <el-card class="form-card">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" @submit.prevent="onSubmit">
+  <div class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">修改密码</h2>
+        <p class="page-desc">修改后需重新登录</p>
+      </div>
+    </header>
+
+    <section class="panel">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="form" @submit.prevent="onSubmit">
         <el-form-item label="登录账号">
           <el-input :model-value="auth.user?.username" disabled />
         </el-form-item>
@@ -86,31 +92,56 @@ function goBack(): void {
           <el-button @click="goBack">返回</el-button>
         </el-form-item>
       </el-form>
-      <el-alert type="warning" :closable="false" show-icon style="margin-top: 16px">
+      <el-alert type="warning" :closable="false" show-icon class="alert">
         <template #title>密码修改后需要重新登录</template>
       </el-alert>
-    </el-card>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.change-password {
+.admin-page {
   max-width: 600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: var(--wm-space-xl);
 }
 
 .page-title {
-  margin: 0 0 24px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
 }
 
-.form-card {
-  padding: 8px;
+.page-desc {
+  color: var(--wm-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
+  box-shadow: var(--wm-shadow-sm);
+}
+
+.form {
+  max-width: 480px;
 }
 
 .tip {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-top: 4px;
+  color: var(--wm-text-tertiary);
+  margin-top: var(--wm-space-2xs);
+}
+
+.alert {
+  margin-top: var(--wm-space-lg);
 }
 </style>

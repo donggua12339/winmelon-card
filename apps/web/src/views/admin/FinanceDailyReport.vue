@@ -111,9 +111,12 @@ onMounted(fetchReport);
 </script>
 
 <template>
-  <div v-loading="loading">
-    <div class="toolbar">
-      <h2>财务对账</h2>
+  <div v-loading="loading" class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">财务对账</h2>
+        <p class="page-desc">日表 / 通道 / 商户多维度收入与退款</p>
+      </div>
       <div class="actions">
         <el-radio-group v-model="days" @change="fetchReport">
           <el-radio-button :value="7">7 天</el-radio-button>
@@ -124,54 +127,56 @@ onMounted(fetchReport);
         <el-button type="primary" plain @click="exportCsv">导出 CSV</el-button>
         <el-button @click="updateTolerance">容差 ¥{{ toleranceYuan }}</el-button>
       </div>
-    </div>
+    </header>
 
     <!-- 总览 -->
-    <div v-if="report" class="summary-grid">
-      <div class="summary-card income">
-        <div class="label">总收入</div>
-        <div class="value">{{ formatMoney(report.daily.totals.revenue) }}</div>
-        <div class="sub">{{ report.daily.totals.orderCount }} 笔已支付</div>
+    <div v-if="report" class="stats-grid">
+      <div class="stat-card stat-primary">
+        <div class="stat-label">总收入</div>
+        <div class="stat-value">{{ formatMoney(report.daily.totals.revenue) }}</div>
+        <div class="stat-sub">{{ report.daily.totals.orderCount }} 笔已支付</div>
       </div>
-      <div class="summary-card refund">
-        <div class="label">总退款</div>
-        <div class="value">{{ formatMoney(report.daily.totals.refundAmount) }}</div>
-        <div class="sub">{{ report.daily.totals.refundCount }} 笔退款</div>
+      <div class="stat-card stat-danger">
+        <div class="stat-label">总退款</div>
+        <div class="stat-value">{{ formatMoney(report.daily.totals.refundAmount) }}</div>
+        <div class="stat-sub">{{ report.daily.totals.refundCount }} 笔退款</div>
       </div>
-      <div class="summary-card net">
-        <div class="label">净收入</div>
-        <div class="value">{{ formatMoney(report.daily.totals.netRevenue) }}</div>
-        <div class="sub">= 入账 - 退款</div>
+      <div class="stat-card stat-success">
+        <div class="stat-label">净收入</div>
+        <div class="stat-value">{{ formatMoney(report.daily.totals.netRevenue) }}</div>
+        <div class="stat-sub">= 入账 - 退款</div>
       </div>
-      <div class="summary-card rate">
-        <div class="label">退款率</div>
-        <div class="value">
+      <div class="stat-card stat-warning">
+        <div class="stat-label">退款率</div>
+        <div class="stat-value">
           {{
             report.daily.totals.orderCount > 0
               ? ((report.daily.totals.refundCount / report.daily.totals.orderCount) * 100).toFixed(1)
               : '0.0'
           }}%
         </div>
-        <div class="sub">退款笔数 / 支付笔数</div>
+        <div class="stat-sub">退款笔数 / 支付笔数</div>
       </div>
     </div>
 
     <!-- 日表 -->
-    <el-card v-if="report" class="section-card" shadow="never">
-      <template #header>
-        <span class="section-title">📅 日表（{{ days }} 天）</span>
-      </template>
-      <el-table :data="report.daily.days" border>
+    <section v-if="report" class="panel">
+      <h3 class="panel-title">日表（{{ days }} 天）</h3>
+      <el-table :data="report.daily.days" :border="false" stripe>
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column label="总收入" width="120" align="right">
-          <template #default="{ row }">{{ formatMoney(row.revenue) }}</template>
+          <template #default="{ row }">
+            <span class="amount">{{ formatMoney(row.revenue) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="总退款" width="120" align="right">
-          <template #default="{ row }">{{ formatMoney(row.refundAmount) }}</template>
+          <template #default="{ row }">
+            <span class="amount amount-danger">{{ formatMoney(row.refundAmount) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="净收入" width="120" align="right">
           <template #default="{ row }">
-            <span :style="{ color: Number(row.netRevenue) >= 0 ? '#10b981' : '#ef4444' }">{{
+            <span :class="['amount', Number(row.netRevenue) >= 0 ? 'amount-success' : 'amount-danger']">{{
               formatMoney(row.netRevenue)
             }}</span>
           </template>
@@ -181,150 +186,219 @@ onMounted(fetchReport);
         <el-table-column prop="refundRate" label="退款率" width="100" align="right">
           <template #default="{ row }">
             <span
-              :style="{
-                color: Number(row.refundRate) > 10 ? '#ef4444' : Number(row.refundRate) > 5 ? '#f59e0b' : '#10b981',
-              }"
+              :class="[
+                'amount',
+                Number(row.refundRate) > 10
+                  ? 'amount-danger'
+                  : Number(row.refundRate) > 5
+                    ? 'amount-warning'
+                    : 'amount-success',
+              ]"
             >
               {{ row.refundRate }}%
             </span>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </section>
 
     <!-- 按通道 -->
-    <el-card v-if="report && report.byChannel.length" class="section-card" shadow="never">
-      <template #header>
-        <span class="section-title">💳 按支付通道</span>
-      </template>
-      <el-table :data="report.byChannel" border>
+    <section v-if="report && report.byChannel.length" class="panel">
+      <h3 class="panel-title">按支付通道</h3>
+      <el-table :data="report.byChannel" :border="false" stripe>
         <el-table-column prop="channel" label="通道" width="160" />
         <el-table-column label="总收入" align="right">
-          <template #default="{ row }">{{ formatMoney(row.revenue) }}</template>
+          <template #default="{ row }">
+            <span class="amount">{{ formatMoney(row.revenue) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="总退款" align="right">
-          <template #default="{ row }">{{ formatMoney(row.refundAmount) }}</template>
+          <template #default="{ row }">
+            <span class="amount amount-danger">{{ formatMoney(row.refundAmount) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="手续费" align="right">
-          <template #default="{ row }">{{ formatMoney(row.fee) }}</template>
+          <template #default="{ row }">
+            <span class="amount amount-tertiary">{{ formatMoney(row.fee) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="净收入" align="right">
           <template #default="{ row }">
-            <b :style="{ color: Number(row.netRevenue) >= 0 ? '#10b981' : '#ef4444' }">{{
-              formatMoney(row.netRevenue)
-            }}</b>
+            <span
+              :class="['amount', 'amount-strong', Number(row.netRevenue) >= 0 ? 'amount-success' : 'amount-danger']"
+              >{{ formatMoney(row.netRevenue) }}</span
+            >
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </section>
 
     <!-- 按商户 -->
-    <el-card v-if="report && report.byMerchant.length" class="section-card" shadow="never">
-      <template #header>
-        <span class="section-title">🏪 按商户（Top）</span>
-      </template>
-      <el-table :data="report.byMerchant" border>
+    <section v-if="report && report.byMerchant.length" class="panel">
+      <h3 class="panel-title">按商户（Top）</h3>
+      <el-table :data="report.byMerchant" :border="false" stripe>
         <el-table-column prop="merchantName" label="商户名" min-width="200" />
         <el-table-column label="总收入" align="right">
-          <template #default="{ row }">{{ formatMoney(row.revenue) }}</template>
+          <template #default="{ row }">
+            <span class="amount">{{ formatMoney(row.revenue) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="总退款" align="right">
-          <template #default="{ row }">{{ formatMoney(row.refundAmount) }}</template>
+          <template #default="{ row }">
+            <span class="amount amount-danger">{{ formatMoney(row.refundAmount) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="净收入" align="right">
           <template #default="{ row }">
-            <b :style="{ color: Number(row.netRevenue) >= 0 ? '#10b981' : '#ef4444' }">{{
-              formatMoney(row.netRevenue)
-            }}</b>
+            <span
+              :class="['amount', 'amount-strong', Number(row.netRevenue) >= 0 ? 'amount-success' : 'amount-danger']"
+              >{{ formatMoney(row.netRevenue) }}</span
+            >
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.toolbar {
+.admin-page {
+  max-width: var(--wm-container-max);
+  margin: 0 auto;
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: var(--wm-space-lg);
+  margin-bottom: var(--wm-space-xl);
+  flex-wrap: wrap;
 }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.page-desc {
+  color: var(--wm-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wm-space-sm);
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.summary-grid {
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--wm-space-md);
+  margin-bottom: var(--wm-space-xl);
 }
 
-.summary-card {
-  padding: 20px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+.stat-card {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
+  box-shadow: var(--wm-shadow-sm);
   position: relative;
   overflow: hidden;
 }
 
-.summary-card::before {
+.stat-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  width: 4px;
+  width: 3px;
   height: 100%;
   background: var(--card-color);
 }
 
-.summary-card.income {
-  --card-color: #3b82f6;
+.stat-primary {
+  --card-color: var(--wm-accent-primary);
 }
-.summary-card.refund {
-  --card-color: #ef4444;
+.stat-success {
+  --card-color: var(--wm-accent-success);
 }
-.summary-card.net {
-  --card-color: #10b981;
+.stat-warning {
+  --card-color: var(--wm-accent-warning);
 }
-.summary-card.rate {
-  --card-color: #f59e0b;
+.stat-danger {
+  --card-color: var(--wm-accent-danger);
 }
 
-.summary-card .label {
+.stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--wm-text-secondary);
   margin-bottom: 6px;
   font-weight: 500;
 }
 
-.summary-card .value {
+.stat-value {
   font-size: 26px;
-  font-weight: 800;
-  color: #0f172a;
-  font-family: monospace;
+  font-weight: 700;
+  color: var(--wm-text-primary);
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.summary-card .sub {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 4px;
+.stat-sub {
+  font-size: 12px;
+  color: var(--wm-text-tertiary);
+  margin-top: 6px;
 }
 
-.section-card {
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 16px;
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-lg);
+  margin-bottom: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
 }
 
-.section-title {
-  font-size: 14px;
+.panel-title {
+  font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--wm-text-primary);
+  margin: 0 0 var(--wm-space-md);
+  letter-spacing: -0.005em;
+}
+
+.amount {
+  font-weight: 500;
+  color: var(--wm-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-strong {
+  font-weight: 700;
+}
+
+.amount-success {
+  color: var(--wm-accent-success);
+}
+
+.amount-warning {
+  color: var(--wm-accent-warning);
+}
+
+.amount-danger {
+  color: var(--wm-accent-danger);
+}
+
+.amount-tertiary {
+  color: var(--wm-text-tertiary);
 }
 </style>

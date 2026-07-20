@@ -58,13 +58,15 @@ onMounted(fetchShop);
 </script>
 
 <template>
-  <div v-loading="loading" class="config">
-    <div class="page-header">
-      <h2>系统配置</h2>
-      <p class="page-desc">管理店铺信息、公告与在线状态</p>
-    </div>
+  <div v-loading="loading" class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">系统配置</h2>
+        <p class="page-desc">管理店铺信息、公告与在线状态</p>
+      </div>
+    </header>
 
-    <div v-if="shop" class="glass config-card">
+    <section v-if="shop" class="panel">
       <div class="info-row">
         <span class="info-label">店铺编号</span>
         <code class="info-value">{{ shop.code }}</code>
@@ -110,24 +112,26 @@ onMounted(fetchShop);
         <span class="info-label">最后更新</span>
         <span class="info-value">{{ new Date(shop.updatedAt).toLocaleString() }}</span>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.config {
+.admin-page {
   max-width: 720px;
   margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--wm-space-xl);
 }
 
-.page-header h2 {
+.page-title {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .page-desc {
@@ -136,22 +140,27 @@ onMounted(fetchShop);
   margin: 0;
 }
 
-.config-card {
-  padding: 32px;
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
+  box-shadow: var(--wm-shadow-sm);
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--wm-border-glass);
-  margin-bottom: 16px;
+  padding: var(--wm-space-md) 0;
+  border-bottom: 1px solid var(--wm-border-default);
+  margin-bottom: var(--wm-space-md);
 }
 
 .info-label {
   color: var(--wm-text-secondary);
   font-size: 13px;
+  font-weight: 500;
 }
 
 .info-value {
@@ -161,13 +170,13 @@ onMounted(fetchShop);
 }
 
 .form {
-  margin-top: 16px;
+  margin-top: var(--wm-space-md);
 }
 
 .tip {
   color: var(--wm-text-tertiary);
   font-size: 12px;
-  margin-top: 4px;
-  line-height: 1.4;
+  margin-top: var(--wm-space-2xs);
+  line-height: 1.5;
 }
 </style>

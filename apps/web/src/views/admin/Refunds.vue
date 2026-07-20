@@ -263,9 +263,12 @@ onMounted(fetchList);
 </script>
 
 <template>
-  <div>
-    <div class="toolbar">
-      <h2>退款管理</h2>
+  <div class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">退款管理</h2>
+        <p class="page-desc">审核退款 / 通道退款 / USDT 手动打款 / 失败重试</p>
+      </div>
       <div class="actions">
         <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 140px" @change="fetchList">
           <el-option label="待审核" value="PENDING" />
@@ -276,112 +279,121 @@ onMounted(fetchList);
         </el-select>
         <el-button @click="fetchList">刷新</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-table v-loading="loading" :data="list" border>
-      <el-table-column prop="refundNo" label="退款单号" min-width="170" />
-      <el-table-column label="关联订单" min-width="170">
-        <template #default="{ row }">
-          <div>{{ row.order.orderNo }}</div>
-          <div style="font-size: 12px; color: #94a3b8">{{ row.order.buyerEmail }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="退款金额" width="100">
-        <template #default="{ row }">¥{{ row.amount }}</template>
-      </el-table-column>
-      <el-table-column prop="initiator" label="发起方" width="90">
-        <template #default="{ row }">
-          <el-tag size="small" effect="plain">{{
-            INITIATOR_LABELS[row.initiator as keyof typeof INITIATOR_LABELS]
-          }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="STATUS_TYPES[row.status as keyof typeof STATUS_TYPES]">
-            {{ STATUS_LABELS[row.status as keyof typeof STATUS_LABELS] }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="reason" label="退款原因" min-width="180" show-overflow-tooltip />
-      <el-table-column label="打款方式" width="100">
-        <template #default="{ row }">
-          <span v-if="row.status === 'PAID'">{{ row.manualPayout ? '线下' : '通道' }}</span>
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="重试" width="80">
-        <template #default="{ row }">
-          <span
-            :style="{ color: row.retryCount >= MAX_RETRY ? '#ef4444' : row.retryCount > 0 ? '#f59e0b' : '#94a3b8' }"
-          >
-            {{ row.retryCount || 0 }}/{{ MAX_RETRY }}
-          </span>
-          <div v-if="row.nextRetryAt && row.status === 'FAILED'" style="font-size: 11px; color: #94a3b8">
-            下次 {{ formatTime(row.nextRetryAt) }}
-          </div>
-          <div v-if="row.alertSentAt" style="font-size: 11px; color: #ef4444">已告警</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="最近失败" min-width="180" show-overflow-tooltip>
-        <template #default="{ row }">
-          <span v-if="row.lastError" style="font-size: 12px; color: #94a3b8">{{ row.lastError }}</span>
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createdAt" label="申请时间" width="160">
-        <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="320" fixed="right">
-        <template #default="{ row }">
-          <template v-if="(row as RefundItem).status === 'PENDING'">
-            <el-button link type="success" size="small" @click="onApprove(row as RefundItem)">通过</el-button>
-            <el-button link type="danger" size="small" @click="onReject(row as RefundItem)">拒绝</el-button>
+    <section class="panel">
+      <el-table v-loading="loading" :data="list" :border="false" stripe>
+        <el-table-column prop="refundNo" label="退款单号" min-width="170" />
+        <el-table-column label="关联订单" min-width="170">
+          <template #default="{ row }">
+            <div>{{ row.order.orderNo }}</div>
+            <div class="text-tertiary text-sm">{{ row.order.buyerEmail }}</div>
           </template>
-          <template v-else-if="(row as RefundItem).status === 'APPROVED'">
-            <el-button link type="primary" size="small" @click="onMarkPaidChannel(row as RefundItem)"
-              >通道退款</el-button
+        </el-table-column>
+        <el-table-column label="退款金额" width="100" align="right">
+          <template #default="{ row }">
+            <span class="amount amount-danger">¥{{ row.amount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="initiator" label="发起方" width="90">
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain">{{
+              INITIATOR_LABELS[row.initiator as keyof typeof INITIATOR_LABELS]
+            }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="STATUS_TYPES[row.status as keyof typeof STATUS_TYPES]">
+              {{ STATUS_LABELS[row.status as keyof typeof STATUS_LABELS] }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="reason" label="退款原因" min-width="180" show-overflow-tooltip />
+        <el-table-column label="打款方式" width="100">
+          <template #default="{ row }">
+            <span v-if="row.status === 'PAID'">{{ row.manualPayout ? '线下' : '通道' }}</span>
+            <span v-else class="text-tertiary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="重试" width="100">
+          <template #default="{ row }">
+            <span
+              :class="[
+                'retry-count',
+                row.retryCount >= MAX_RETRY ? 'retry-critical' : row.retryCount > 0 ? 'retry-warning' : 'retry-idle',
+              ]"
             >
-            <el-button link type="warning" size="small" @click="openUsdtDialog(row as RefundItem)">USDT 手动</el-button>
-          </template>
-          <template v-else-if="(row as RefundItem).status === 'FAILED'">
-            <el-button
-              v-if="(row as RefundItem).retryCount < MAX_RETRY"
-              link
-              type="primary"
-              size="small"
-              @click="onManualRetry(row as RefundItem)"
-            >
-              立即重试
-            </el-button>
-            <el-button link type="warning" size="small" @click="openUsdtDialog(row as RefundItem)">
-              转 USDT 手动
-            </el-button>
-          </template>
-          <template v-else>
-            <span style="color: #94a3b8; font-size: 12px">
-              {{ (row as RefundItem).processedAt ? formatTime((row as RefundItem).processedAt) : '-' }}
+              {{ row.retryCount || 0 }}/{{ MAX_RETRY }}
             </span>
+            <div v-if="row.nextRetryAt && row.status === 'FAILED'" class="text-tertiary text-xs">
+              下次 {{ formatTime(row.nextRetryAt) }}
+            </div>
+            <div v-if="row.alertSentAt" class="retry-alert">已告警</div>
           </template>
-        </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+        <el-table-column label="最近失败" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.lastError" class="text-tertiary text-sm">{{ row.lastError }}</span>
+            <span v-else class="text-tertiary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="申请时间" width="160">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="320" fixed="right">
+          <template #default="{ row }">
+            <template v-if="(row as RefundItem).status === 'PENDING'">
+              <el-button link type="success" size="small" @click="onApprove(row as RefundItem)">通过</el-button>
+              <el-button link type="danger" size="small" @click="onReject(row as RefundItem)">拒绝</el-button>
+            </template>
+            <template v-else-if="(row as RefundItem).status === 'APPROVED'">
+              <el-button link type="primary" size="small" @click="onMarkPaidChannel(row as RefundItem)"
+                >通道退款</el-button
+              >
+              <el-button link type="warning" size="small" @click="openUsdtDialog(row as RefundItem)"
+                >USDT 手动</el-button
+              >
+            </template>
+            <template v-else-if="(row as RefundItem).status === 'FAILED'">
+              <el-button
+                v-if="(row as RefundItem).retryCount < MAX_RETRY"
+                link
+                type="primary"
+                size="small"
+                @click="onManualRetry(row as RefundItem)"
+              >
+                立即重试
+              </el-button>
+              <el-button link type="warning" size="small" @click="openUsdtDialog(row as RefundItem)">
+                转 USDT 手动
+              </el-button>
+            </template>
+            <template v-else>
+              <span class="text-tertiary text-sm">
+                {{ (row as RefundItem).processedAt ? formatTime((row as RefundItem).processedAt) : '-' }}
+              </span>
+            </template>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-pagination
-      v-model:current-page="page"
-      v-model:page-size="pageSize"
-      :total="total"
-      layout="total, prev, pager, next"
-      style="margin-top: 16px"
-      @current-change="fetchList"
-    />
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        layout="total, prev, pager, next"
+        class="pagination"
+        @current-change="fetchList"
+      />
+    </section>
 
     <!-- USDT 手动打款弹窗 -->
     <el-dialog v-model="usdtDialogVisible" title="USDT 链上打款" width="540px" :close-on-click-modal="false">
-      <el-alert v-if="usdtForm.refundNo" type="info" :closable="false" show-icon style="margin-bottom: 16px">
+      <el-alert v-if="usdtForm.refundNo" type="info" :closable="false" show-icon class="usdt-alert">
         <template #title>
           退款单 <b>{{ usdtForm.refundNo }}</b
-          >，金额 <b style="color: #ef4444">¥{{ usdtForm.amount }}</b>
+          >，金额 <b class="amount-danger">¥{{ usdtForm.amount }}</b>
         </template>
       </el-alert>
       <el-form label-position="top">
@@ -404,14 +416,99 @@ onMounted(fetchList);
 </template>
 
 <style scoped>
-.toolbar {
+.admin-page {
+  max-width: var(--wm-container-max);
+  margin: 0 auto;
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  gap: var(--wm-space-lg);
+  margin-bottom: var(--wm-space-xl);
+  flex-wrap: wrap;
 }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.page-desc {
+  color: var(--wm-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--wm-space-sm);
+}
+
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
+}
+
+.pagination {
+  margin-top: var(--wm-space-lg);
+  justify-content: flex-end;
+  display: flex;
+}
+
+.amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--wm-text-primary);
+}
+
+.amount-danger {
+  color: var(--wm-accent-danger);
+}
+
+.text-tertiary {
+  color: var(--wm-text-tertiary);
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-xs {
+  font-size: 11px;
+}
+
+.retry-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.retry-critical {
+  color: var(--wm-accent-danger);
+}
+
+.retry-warning {
+  color: var(--wm-accent-warning);
+}
+
+.retry-idle {
+  color: var(--wm-text-tertiary);
+}
+
+.retry-alert {
+  font-size: 11px;
+  color: var(--wm-accent-danger);
+  margin-top: 2px;
+}
+
+.usdt-alert {
+  margin-bottom: var(--wm-space-md);
 }
 </style>
