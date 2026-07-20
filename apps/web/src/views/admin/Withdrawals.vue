@@ -187,13 +187,31 @@ onMounted(fetchList);
       </el-table-column>
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.status === 'PENDING'" link type="success" size="small" @click="onApprove(row)">
+          <el-button
+            v-if="row.status === 'PENDING'"
+            link
+            type="success"
+            size="small"
+            @click="onApprove(row as WithdrawalItem)"
+          >
             通过
           </el-button>
-          <el-button v-if="row.status === 'PENDING'" link type="danger" size="small" @click="onRejectOpen(row)">
+          <el-button
+            v-if="row.status === 'PENDING'"
+            link
+            type="danger"
+            size="small"
+            @click="onRejectOpen(row as WithdrawalItem)"
+          >
             拒绝
           </el-button>
-          <el-button v-if="row.status === 'APPROVING'" link type="primary" size="small" @click="onPaidOpen(row)">
+          <el-button
+            v-if="row.status === 'APPROVING'"
+            link
+            type="primary"
+            size="small"
+            @click="onPaidOpen(row as WithdrawalItem)"
+          >
             标记已打款
           </el-button>
           <span v-if="row.status === 'PAID' || row.status === 'REJECTED'" style="color: #94a3b8">已完成</span>

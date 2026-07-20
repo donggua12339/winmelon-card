@@ -44,6 +44,11 @@ const routes = [
     component: () => import('@/views/ForgotPassword.vue'),
   },
   {
+    path: '/activate',
+    name: 'activate',
+    component: () => import('@/views/Activate.vue'),
+  },
+  {
     path: '/admin',
     name: 'admin',
     component: () => import('@/views/admin/Layout.vue'),
@@ -127,6 +132,21 @@ const routes = [
         path: 'tickets',
         name: 'admin-tickets',
         component: () => import('@/views/admin/Tickets.vue'),
+      },
+      {
+        path: 'refunds',
+        name: 'admin-refunds',
+        component: () => import('@/views/admin/Refunds.vue'),
+      },
+      {
+        path: 'finance/daily-report',
+        name: 'admin-finance-daily-report',
+        component: () => import('@/views/admin/FinanceDailyReport.vue'),
+      },
+      {
+        path: 'finance/alerts',
+        name: 'admin-finance-alerts',
+        component: () => import('@/views/admin/FinanceAlerts.vue'),
       },
     ],
   },

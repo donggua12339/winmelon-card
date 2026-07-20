@@ -140,7 +140,13 @@ onMounted(fetchAll);
         </el-table-column>
         <el-table-column label="操作" width="80">
           <template #default="{ row }">
-            <el-button link type="danger" size="small" :disabled="row.usedCount > 0" @click="removeCode(row)">
+            <el-button
+              link
+              type="danger"
+              size="small"
+              :disabled="row.usedCount > 0"
+              @click="removeCode(row as InviteCode)"
+            >
               删除
             </el-button>
           </template>

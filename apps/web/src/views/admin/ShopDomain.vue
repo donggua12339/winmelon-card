@@ -150,7 +150,7 @@ onMounted(async () => {
           <div v-if="!domainInfo.verified" class="dns-section">
             <h4>📌 DNS 验证步骤</h4>
             <p>请到域名服务商 DNS 管理面板，添加以下 TXT 记录：</p>
-            <el-table :data="[domainInfo.dnsInstruction]" border>
+            <el-table :data="domainInfo.dnsInstruction ? [domainInfo.dnsInstruction] : []" border>
               <el-table-column label="类型" prop="type" width="100" />
               <el-table-column label="主机记录" min-width="200">
                 <template #default="{ row }">

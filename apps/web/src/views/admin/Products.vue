@@ -317,6 +317,10 @@ onMounted(() => {
             <el-option label="月度 (MONTHLY)" value="MONTHLY" />
             <el-option label="终身 (LIFETIME)" value="LIFETIME" />
           </el-select>
+          <div class="form-item-tip">
+            仅 SeekAll 会员卡商品需选择。付款成功后 WM 会自动通知 SeekAll 生成 License code, 买家凭 License code 在
+            SeekAll SDK 激活。非 SeekAll 商品留空(不触发 webhook)。
+          </div>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" :max="99999" />
@@ -347,5 +351,11 @@ onMounted(() => {
 .low-stock {
   color: #f56c6c;
   font-weight: bold;
+}
+.form-item-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 </style>

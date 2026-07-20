@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { post, get } from '@/api/http';
+import { axiosInstance } from '@/api/http';
 
 export interface LoginResult {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
   defaultRedirect?: string;
   user: {
@@ -16,14 +16,12 @@ export interface LoginResult {
   };
 }
 
-const ACCESS_KEY = 'wm_access_token';
-const REFRESH_KEY = 'wm_refresh_token';
 const MERCHANT_THEME_KEY = 'wm_merchant_theme';
 const MERCHANT_NAME_KEY = 'wm_merchant_name';
 
 export const useAuthStore = defineStore('auth', () => {
-  const accessToken = ref<string | null>(localStorage.getItem(ACCESS_KEY));
-  const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_KEY));
+  // P1-6: access token 内存化（页面刷新即丢失，依赖 refresh cookie 自动换新）
+  const accessToken = ref<string | null>(null);
   const user = ref<LoginResult['user'] | null>(null);
   const merchantName = ref<string | null>(localStorage.getItem(MERCHANT_NAME_KEY));
   const merchantThemeColor = ref<string | null>(localStorage.getItem(MERCHANT_THEME_KEY));
@@ -36,31 +34,35 @@ export const useAuthStore = defineStore('auth', () => {
     return '/';
   });
 
+  /** 提供给 http 拦截器用：每次请求取最新值 */
+  function getAccessToken(): string | null {
+    return accessToken.value;
+  }
+
   async function login(username: string, password: string): Promise<LoginResult> {
     const result = await post<LoginResult>('/auth/login', { username, password });
     applySession(result);
     return result;
   }
 
+  /**
+   * P1-6: refresh 走 httpOnly cookie（不带 refreshToken 在 body）
+   * 通过 cookie 自动发送到后端 +withCredentials
+   */
   async function refresh(): Promise<void> {
-    if (!refreshToken.value) {
-      throw new Error('无刷新令牌');
-    }
-    const result = await post<LoginResult>('/auth/refresh', { refreshToken: refreshToken.value });
-    applySession(result);
+    const result = await axiosInstance.post<LoginResult>('/auth/refresh', {});
+    applySession(result.data);
   }
 
-  /** 直接设置会话（用于代登录等场景） */
-  function setSession(payload: { accessToken: string; refreshToken: string; user: LoginResult['user'] }): void {
+  /** 直接设置会话（用于代登录、激活等场景） */
+  function setSession(payload: { accessToken: string; refreshToken?: string; user: LoginResult['user'] }): void {
     applySession(payload);
   }
 
-  function applySession(payload: { accessToken: string; refreshToken: string; user: LoginResult['user'] }): void {
+  function applySession(payload: { accessToken: string; refreshToken?: string; user: LoginResult['user'] }): void {
     accessToken.value = payload.accessToken;
-    refreshToken.value = payload.refreshToken;
     user.value = payload.user;
-    localStorage.setItem(ACCESS_KEY, payload.accessToken);
-    localStorage.setItem(REFRESH_KEY, payload.refreshToken);
+    // refreshToken 现在走 httpOnly cookie，不需要本地存储
   }
 
   function setMerchantInfo(info: { merchantName?: string; themeColor?: string }): void {
@@ -95,21 +97,36 @@ export const useAuthStore = defineStore('auth', () => {
     clearTokens();
   }
 
+  /**
+   * P1-6: 页面加载时尝试用 refresh cookie 自动登录
+   * - 失败（cookie 无效/过期）则保持未登录
+   * - 后端返回 access token + user，本地有会话即可
+   */
+  async function bootstrapFromCookie(): Promise<boolean> {
+    try {
+      const result = await axiosInstance.post<LoginResult>('/auth/refresh', {});
+      if (result.data.accessToken && result.data.user) {
+        applySession(result.data);
+        return true;
+      }
+    } catch {
+      // 静默失败 - 用户未登录正常
+    }
+    return false;
+  }
+
   async function fetchMe(): Promise<void> {
     try {
       const me = await get<LoginResult['user']>('/auth/me');
       user.value = me ?? null;
     } catch {
-      clearTokens();
+      // 401 时由 http 拦截器处理
     }
   }
 
   function clearTokens(): void {
     accessToken.value = null;
-    refreshToken.value = null;
     user.value = null;
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
     merchantName.value = null;
     merchantThemeColor.value = null;
     localStorage.removeItem(MERCHANT_NAME_KEY);
@@ -124,18 +141,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     accessToken,
-    refreshToken,
     user,
     merchantName,
     merchantThemeColor,
     isAuthenticated,
     roles,
     defaultRedirect,
+    getAccessToken,
     login,
     refresh,
     setSession,
     setMerchantInfo,
     logout,
+    bootstrapFromCookie,
     fetchMe,
     clearTokens,
   };

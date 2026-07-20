@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { get, post, del } from '@/api/http';
-import type { UploadRawFile } from 'element-plus';
+import type { UploadFile, UploadRawFile } from 'element-plus';
 
 interface Product {
   id: string;
@@ -100,14 +100,16 @@ function openImport(): void {
   importDialogVisible.value = true;
 }
 
-function onFileChange(file: UploadRawFile): void {
+function onFileChange(file: UploadFile): void {
   // 阻止 el-upload 自动上传，仅读取文件内容
-  importFile.value = file as unknown as File;
+  const raw = file.raw as UploadRawFile | undefined;
+  if (!raw) return;
+  importFile.value = raw as unknown as File;
   const reader = new FileReader();
   reader.onload = (e) => {
     importCsvText.value = String(e.target?.result ?? '');
   };
-  reader.readAsText(file as unknown as File);
+  reader.readAsText(raw as unknown as File);
 }
 
 async function onImport(): Promise<void> {

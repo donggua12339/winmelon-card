@@ -234,6 +234,9 @@ onMounted(() => {
 /* 店铺 Hero */
 .shop-header {
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 48px 24px 32px;
   overflow: hidden;
   border-bottom: 1px solid var(--wm-border-glass);
@@ -244,7 +247,9 @@ onMounted(() => {
   top: -50%;
   left: 50%;
   transform: translateX(-50%);
-  width: 800px;
+  /* M2-修复: 限制 max-width 100% 防止 mobile viewport (375) 横向滚动 */
+  width: min(800px, 100%);
+  max-width: 100%;
   height: 400px;
   background: radial-gradient(ellipse, rgba(124, 58, 237, 0.2) 0%, transparent 60%);
   pointer-events: none;

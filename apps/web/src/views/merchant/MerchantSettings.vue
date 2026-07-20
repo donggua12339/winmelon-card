@@ -135,7 +135,7 @@ onMounted(fetchProfile);
       <template #header>工作台主题色</template>
       <el-form ref="themeRef" :model="themeForm" :rules="themeRules" label-position="top">
         <el-form-item label="主题色">
-          <el-color-picker v-model="themeForm.color" :predefine="presetColors" show-alpha="{false}" />
+          <el-color-picker v-model="themeForm.color" :predefine="presetColors" :show-alpha="false" />
           <span class="theme-preview" :style="{ background: themeForm.color }"></span>
           <code class="theme-hex">{{ themeForm.color }}</code>
         </el-form-item>

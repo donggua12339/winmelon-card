@@ -1,66 +1,142 @@
 // ============================================================
-// WM 发卡网设计系统 - 暗夜极光 + 玻璃拟态
+// WM 发卡网设计系统 v3 - Stripe/Linear 双主题
+// 默认亮色(Stripe),可切换暗色(Linear)
 // ============================================================
 
 :root {
-  // ===== 基础色板（暗色基底）=====
-  --wm-bg-deep: #0b0e1a;          // 最深背景
-  --wm-bg-base: #0f1424;          // 主背景
-  --wm-bg-elevated: #131829;      // 次级背景
-  --wm-bg-card: rgba(255, 255, 255, 0.04);  // 玻璃卡背景
+  // ===== 布局容器 =====
+  --wm-container-max: 1200px;
+  --wm-container-padding: 16px;
 
-  // ===== 渐变 =====
-  --wm-gradient-primary: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
-  --wm-gradient-aurora: linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #06b6d4 100%);
-  --wm-gradient-bg: linear-gradient(180deg, #0b0e1a 0%, #131829 100%);
-  --wm-gradient-glow: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
-
-  // ===== 文字 =====
-  --wm-text-primary: #f1f5f9;
-  --wm-text-secondary: #94a3b8;
-  --wm-text-tertiary: #64748b;
-  --wm-text-on-gradient: #ffffff;
-
-  // ===== 强调色 =====
-  --wm-accent-purple: #7c3aed;
-  --wm-accent-cyan: #06b6d4;
-  --wm-accent-pink: #f472b6;      // 价格霓虹粉
-  --wm-accent-amber: #fbbf24;     // 警告/原价
-  --wm-accent-green: #34d399;     // 成功/库存
-  --wm-accent-red: #f87171;       // 危险/低库存
-
-  // ===== 边框 =====
-  --wm-border-glass: rgba(255, 255, 255, 0.08);
-  --wm-border-glass-hover: rgba(255, 255, 255, 0.16);
-  --wm-border-gradient: linear-gradient(135deg, rgba(124, 58, 237, 0.4), rgba(6, 182, 212, 0.4));
-
-  // ===== 圆角 =====
-  --wm-radius-sm: 8px;
-  --wm-radius-md: 12px;
-  --wm-radius-lg: 16px;
-  --wm-radius-xl: 24px;
+  // ===== 圆角系统 =====
+  --wm-radius-xs: 4px;
+  --wm-radius-sm: 6px;
+  --wm-radius-md: 8px;
+  --wm-radius-lg: 12px;
+  --wm-radius-xl: 16px;
   --wm-radius-pill: 999px;
 
-  // ===== 阴影 / 辉光 =====
-  --wm-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --wm-shadow-glow-purple: 0 0 24px rgba(124, 58, 237, 0.4);
-  --wm-shadow-glow-cyan: 0 0 24px rgba(6, 182, 212, 0.4);
-  --wm-shadow-glow-pink: 0 0 24px rgba(244, 114, 182, 0.4);
-
-  // ===== 玻璃拟态 =====
-  --wm-glass-blur: 20px;
-  --wm-glass-bg: rgba(255, 255, 255, 0.04);
-  --wm-glass-bg-hover: rgba(255, 255, 255, 0.08);
-
-  // ===== 间距 =====
-  --wm-space-xs: 4px;
+  // ===== 间距系统 =====
+  --wm-space-3xs: 2px;
+  --wm-space-2xs: 4px;
+  --wm-space-xs: 6px;
   --wm-space-sm: 8px;
-  --wm-space-md: 16px;
-  --wm-space-lg: 24px;
-  --wm-space-xl: 32px;
-  --wm-space-2xl: 48px;
+  --wm-space-md: 12px;
+  --wm-space-lg: 16px;
+  --wm-space-xl: 24px;
+  --wm-space-2xl: 32px;
+  --wm-space-3xl: 48px;
 
-  // ===== 字体 =====
-  --wm-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  // ===== 字体系统 =====
+  --wm-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --wm-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+// ============================================================
+// 主题 1：Stripe 亮色（DEFAULT）
+// 参考: stripe.com dashboard
+// ============================================================
+:root,
+[data-theme='bright-business'] {
+  // ===== 背景系统 =====
+  --wm-bg-deep: #FAFAFB;
+  --wm-bg-base: #FFFFFF;
+  --wm-bg-elevated: #FFFFFF;
+  --wm-bg-card: #FFFFFF;
+  --wm-bg-hover: #F4F4F5;
+  --wm-bg-active: #E4E4E7;
+
+  // ===== 渐变系统（仅 CTA 用，大面积纯色）=====
+  --wm-gradient-primary: linear-gradient(135deg, #635BFF 0%, #5E6AD2 100%);
+  --wm-gradient-bg: none;
+
+  // ===== 文字系统 =====
+  --wm-text-primary: #1A1D29;
+  --wm-text-secondary: #6B7280;
+  --wm-text-tertiary: #9CA3AF;
+  --wm-text-disabled: #D1D5DB;
+  --wm-text-on-primary: #FFFFFF;
+
+  // ===== 强调色系统（Stripe 蓝 + 中性状态色）=====
+  --wm-accent-primary: #635BFF;
+  --wm-accent-primary-hover: #4F46E5;
+  --wm-accent-secondary: #0EA5E9;
+  --wm-accent-tertiary: #EC4899;
+  --wm-accent-success: #16A34A;
+  --wm-accent-warning: #F59E0B;
+  --wm-accent-danger: #DC2626;
+
+  // ===== 边框系统 =====
+  --wm-border-default: #E5E7EB;
+  --wm-border-hover: #D1D5DB;
+  --wm-border-focus: #635BFF;
+
+  // ===== 阴影系统（微阴影为主，hover 加深）=====
+  --wm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --wm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --wm-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --wm-shadow-primary: 0 4px 16px rgba(99, 91, 255, 0.2);
+
+  // ===== 卡片系统（实色卡片 + 微阴影，无玻璃拟态）=====
+  --wm-glass-bg: #FFFFFF;
+  --wm-glass-bg-hover: #FAFAFB;
+  --wm-glass-blur: 0px;
+
+  // ===== 极光 blob 配置（亮色模式禁用）=====
+  --wm-blob-opacity: 0;
+  --wm-blur-radius: 0px;
+}
+
+// ============================================================
+// 主题 2：Linear 暗色（黑夜模式）
+// 参考: linear.app dashboard
+// ============================================================
+[data-theme='aurora-dark'] {
+  // ===== 背景系统（纯暗色，无极光）=====
+  --wm-bg-deep: #0D0D0F;
+  --wm-bg-base: #131316;
+  --wm-bg-elevated: #1A1A1F;
+  --wm-bg-card: #1A1A1F;
+  --wm-bg-hover: #232328;
+  --wm-bg-active: #2A2A30;
+
+  // ===== 渐变系统（仅 CTA 用）=====
+  --wm-gradient-primary: linear-gradient(135deg, #5E6AD2 0%, #7B61FF 100%);
+  --wm-gradient-bg: none;
+
+  // ===== 文字系统 =====
+  --wm-text-primary: #F7F8F8;
+  --wm-text-secondary: #9CA3AF;
+  --wm-text-tertiary: #6B7280;
+  --wm-text-disabled: #4B5563;
+  --wm-text-on-primary: #FFFFFF;
+
+  // ===== 强调色系统（Linear 紫蓝）=====
+  --wm-accent-primary: #7B61FF;
+  --wm-accent-primary-hover: #635BFF;
+  --wm-accent-secondary: #0EA5E9;
+  --wm-accent-tertiary: #EC4899;
+  --wm-accent-success: #22C55E;
+  --wm-accent-warning: #F59E0B;
+  --wm-accent-danger: #EF4444;
+
+  // ===== 边框系统 =====
+  --wm-border-default: #232328;
+  --wm-border-hover: #2A2A30;
+  --wm-border-focus: #7B61FF;
+
+  // ===== 阴影系统（暗色阴影更深）=====
+  --wm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --wm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --wm-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --wm-shadow-primary: 0 4px 16px rgba(123, 97, 255, 0.3);
+
+  // ===== 卡片系统（实色卡片 + 微阴影）=====
+  --wm-glass-bg: #1A1A1F;
+  --wm-glass-bg-hover: #232328;
+  --wm-glass-blur: 0px;
+
+  // ===== 极光 blob 配置（暗色模式也禁用，改纯暗色）=====
+  --wm-blob-opacity: 0;
+  --wm-blur-radius: 0px;
 }

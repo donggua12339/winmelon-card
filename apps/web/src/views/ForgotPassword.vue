@@ -164,7 +164,14 @@ onMounted(refreshCaptcha);
           <el-form-item label="图形验证码">
             <div class="captcha-row">
               <el-input v-model="captchaInput" placeholder="4 位字符" maxlength="4" size="large" />
-              <img v-if="captchaImg" :src="captchaImg" class="captcha-img" alt="captcha" @click="refreshCaptcha" />
+              <img
+                v-if="captchaImg"
+                :src="captchaImg"
+                class="captcha-img"
+                data-testid="captcha"
+                alt="captcha"
+                @click="refreshCaptcha"
+              />
             </div>
             <div class="tip">点击图片可刷新</div>
           </el-form-item>
@@ -208,7 +215,14 @@ onMounted(refreshCaptcha);
           <el-form-item label="图形验证码（再次提交）">
             <div class="captcha-row">
               <el-input v-model="captchaInput" placeholder="4 位字符" maxlength="4" size="large" />
-              <img v-if="captchaImg" :src="captchaImg" class="captcha-img" alt="captcha" @click="refreshCaptcha" />
+              <img
+                v-if="captchaImg"
+                :src="captchaImg"
+                class="captcha-img"
+                data-testid="captcha"
+                alt="captcha"
+                @click="refreshCaptcha"
+              />
             </div>
           </el-form-item>
           <el-button type="primary" size="large" :loading="submitting" class="submit-btn" @click="onSubmit">

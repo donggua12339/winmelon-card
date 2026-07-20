@@ -7,13 +7,14 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.vue --max-warnings 0",
     "typecheck": "vue-tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,vue,css}\""
   },
   "dependencies": {
+    "@sentry/vue": "^10.66.0",
     "@types/qrcode": "^1.5.6",
     "axios": "^1.7.5",
     "echarts": "^6.1.0",
@@ -24,6 +25,7 @@
     "vue-router": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.14.15",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -32,6 +34,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-vue": "^9.27.0",
+    "pngjs": "^5.0.0",
     "prettier": "^3.3.3",
     "sass-embedded": "^1.100.0",
     "typescript": "^5.5.4",

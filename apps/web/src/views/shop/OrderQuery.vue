@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ref, computed } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { post } from '@/api/http';
 
 interface OrderItem {
@@ -21,6 +21,7 @@ interface OrderResult {
   expireAt: string;
   paidAt: string | null;
   deliveredAt: string | null;
+  viewedAt: string | null;
   items: OrderItem[];
   cards: OrderCard[];
 }
@@ -30,6 +31,25 @@ const email = ref('');
 const loading = ref(false);
 const order = ref<OrderResult | null>(null);
 const copiedIndex = ref<number | null>(null);
+
+// 退款弹窗
+const refundDialogVisible = ref(false);
+const refundReason = ref('');
+const refundSubmitting = ref(false);
+
+/**
+ * 退款按钮可见性：
+ * - 状态 PAID / DELIVERED
+ * - 卡密未被查看（viewedAt 为 null）
+ * - 订单未在退款中/已退款（status !== REFUNDED）
+ */
+const canRefund = computed(() => {
+  if (!order.value) return false;
+  const s = order.value.status;
+  if (s !== 'PAID' && s !== 'DELIVERED') return false;
+  if (order.value.viewedAt) return false;
+  return true;
+});
 
 async function onQuery(): Promise<void> {
   if (!orderNo.value || !email.value) {
@@ -46,6 +66,48 @@ async function onQuery(): Promise<void> {
     order.value = null;
   } finally {
     loading.value = false;
+  }
+}
+
+async function openRefundDialog(): Promise<void> {
+  if (!order.value) return;
+  try {
+    await ElMessageBox.confirm('退款申请提交后需平台人工审核，请确认订单未查看卡密且符合退款条件。', '申请退款', {
+      type: 'warning',
+      confirmButtonText: '继续填写',
+      cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  refundReason.value = '';
+  refundDialogVisible.value = true;
+}
+
+async function submitRefund(): Promise<void> {
+  if (!order.value) return;
+  const reason = refundReason.value.trim();
+  if (!reason) {
+    ElMessage.warning('请填写退款原因');
+    return;
+  }
+  if (reason.length > 500) {
+    ElMessage.warning('退款原因不能超过 500 字');
+    return;
+  }
+  refundSubmitting.value = true;
+  try {
+    const result = await post<{ id: string; refundNo: string; status: string }>('/refunds/apply', {
+      orderNo: order.value.orderNo,
+      buyerEmail: email.value.trim(),
+      reason,
+    });
+    ElMessage.success(`退款申请已提交，退款单号 ${result.refundNo}，请等待审核`);
+    refundDialogVisible.value = false;
+  } catch {
+    // http 拦截器已提示
+  } finally {
+    refundSubmitting.value = false;
   }
 }
 
@@ -164,7 +226,61 @@ function formatTime(s: string | null): string {
           show-icon
           title="订单待支付，请尽快完成支付"
         />
+
+        <!-- 退款操作区 -->
+        <div v-if="canRefund" class="refund-section">
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            title="需要退款？"
+            description="如订单存在支付/卡密问题，可提交退款申请，平台审核通过后会原路退款。"
+          />
+          <el-button type="danger" plain size="large" class="refund-btn" @click="openRefundDialog">
+            申请退款
+          </el-button>
+        </div>
+        <el-alert
+          v-else-if="order.status === 'REFUNDED'"
+          type="info"
+          :closable="false"
+          show-icon
+          title="订单已退款完成"
+        />
+        <el-alert
+          v-else-if="(order.status === 'PAID' || order.status === 'DELIVERED') && order.viewedAt"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="卡密已查看，无法在线申请退款"
+          description="如需退款请联系平台客服或提交工单。"
+        />
       </div>
+
+      <!-- 退款弹窗 -->
+      <el-dialog v-model="refundDialogVisible" title="申请退款" width="500px" :close-on-click-modal="false">
+        <div v-if="order" class="refund-form">
+          <div class="refund-order-info">
+            <div><span class="label">订单号：</span>{{ order.orderNo }}</div>
+            <div><span class="label">退款金额：</span>¥{{ order.totalAmount }}</div>
+          </div>
+          <div class="form-row">
+            <label>退款原因（必填，最多 500 字）</label>
+            <el-input
+              v-model="refundReason"
+              type="textarea"
+              :rows="4"
+              maxlength="500"
+              show-word-limit
+              placeholder="请详细说明退款原因，例如：支付成功但未收到卡密 / 卡密无法使用 / 多支付等"
+            />
+          </div>
+        </div>
+        <template #footer>
+          <el-button @click="refundDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="refundSubmitting" @click="submitRefund"> 提交申请 </el-button>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
@@ -386,5 +502,56 @@ function formatTime(s: string | null): string {
 .copy-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+/* 退款区 */
+.refund-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--wm-border-glass);
+}
+
+.refund-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* 退款弹窗 */
+.refund-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.refund-order-info {
+  padding: 12px 16px;
+  background: var(--wm-glass-bg);
+  border-radius: var(--wm-radius-md);
+  font-size: 14px;
+}
+
+.refund-order-info > div {
+  margin: 4px 0;
+}
+
+.refund-order-info .label {
+  color: var(--wm-text-tertiary);
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.refund-form .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refund-form .form-row label {
+  font-size: 13px;
+  color: var(--wm-text-secondary);
+  font-weight: 500;
 }
 </style>

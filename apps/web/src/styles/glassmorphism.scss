@@ -1,55 +1,23 @@
 // ============================================================
-// 玻璃拟态工具类
+// 卡片/视觉工具类 - Stripe/Linear 风格(实色 + 微阴影)
+// 保留原类名避免大改,但去 blur/去辉光,改实色卡片
 // ============================================================
 
-// 基础玻璃卡
+// 基础卡片(原 .glass)
 .glass {
-  background: var(--wm-glass-bg);
-  backdrop-filter: blur(var(--wm-glass-blur));
-  -webkit-backdrop-filter: blur(var(--wm-glass-blur));
-  border: 1px solid var(--wm-border-glass);
-  border-radius: var(--wm-radius-lg);
-  box-shadow: var(--wm-shadow-card);
-  transition: all 0.3s ease;
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-md);
+  box-shadow: var(--wm-shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    background: var(--wm-glass-bg-hover);
-    border-color: var(--wm-border-glass-hover);
+    border-color: var(--wm-border-hover);
+    box-shadow: var(--wm-shadow-md);
   }
 }
 
-// 渐变边框玻璃卡
-.glass-gradient-border {
-  position: relative;
-  background: var(--wm-bg-elevated);
-  border-radius: var(--wm-radius-lg);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    border-radius: inherit;
-    background: var(--wm-border-gradient);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-}
-
-// 辉光效果
-.glow-purple {
-  box-shadow: var(--wm-shadow-glow-purple);
-}
-.glow-cyan {
-  box-shadow: var(--wm-shadow-glow-cyan);
-}
-.glow-pink {
-  box-shadow: var(--wm-shadow-glow-pink);
-}
-
-// 渐变文字
+// 渐变文字(保留用于 CTA/标题强调)
 .text-gradient {
   background: var(--wm-gradient-primary);
   -webkit-background-clip: text;
@@ -58,30 +26,31 @@
 }
 
 .text-gradient-aurora {
-  background: var(--wm-gradient-aurora);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-// 价格霓虹
-.price-neon {
-  color: var(--wm-accent-pink);
-  text-shadow: 0 0 12px rgba(244, 114, 182, 0.5);
-  font-weight: 700;
-}
-
-// 数字高亮
-.num-highlight {
-  font-family: var(--wm-font-mono);
-  font-weight: 700;
   background: var(--wm-gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-// 状态点
+// 价格高亮(去 neon 光晕,保留强调色)
+.price-neon {
+  color: var(--wm-accent-tertiary);
+  font-weight: 700;
+}
+
+.price-highlight {
+  color: var(--wm-accent-tertiary);
+  font-weight: 700;
+}
+
+// 数字高亮(monospace + 主色)
+.num-highlight {
+  font-family: var(--wm-font-mono);
+  font-weight: 700;
+  color: var(--wm-accent-primary);
+}
+
+// 状态点(去光晕,保留色点)
 .status-dot {
   display: inline-block;
   width: 8px;
@@ -90,14 +59,51 @@
   margin-right: 6px;
 
   &.online {
-    background: var(--wm-accent-green);
-    box-shadow: 0 0 8px var(--wm-accent-green);
+    background: var(--wm-accent-success);
   }
   &.offline {
     background: var(--wm-text-tertiary);
   }
   &.warning {
-    background: var(--wm-accent-amber);
-    box-shadow: 0 0 8px var(--wm-accent-amber);
+    background: var(--wm-accent-warning);
+  }
+}
+
+// 辉光效果(暗色模式才有效果,亮色模式降级为边框)
+.glow-purple {
+  [data-theme='aurora-dark'] & {
+    box-shadow: 0 0 24px rgba(123, 97, 255, 0.25);
+  }
+}
+.glow-cyan {
+  [data-theme='aurora-dark'] & {
+    box-shadow: 0 0 24px rgba(14, 165, 233, 0.25);
+  }
+}
+.glow-pink {
+  [data-theme='aurora-dark'] & {
+    box-shadow: 0 0 24px rgba(236, 72, 153, 0.25);
+  }
+}
+
+// 渐变边框卡片(保留,opacity 降低避免太抢眼)
+.glass-gradient-border {
+  position: relative;
+  background: var(--wm-bg-elevated);
+  border-radius: var(--wm-radius-md);
+  border: 1px solid var(--wm-border-default);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--wm-gradient-primary);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.3;
   }
 }

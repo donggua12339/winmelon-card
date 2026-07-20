@@ -149,7 +149,7 @@ onMounted(fetchList);
       </el-table-column>
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
-          <el-button type="danger" size="small" link @click="onRevoke(row)">吊销</el-button>
+          <el-button type="danger" size="small" link @click="onRevoke(row as ApiKey)">吊销</el-button>
         </template>
       </el-table-column>
     </el-table>

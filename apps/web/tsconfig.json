@@ -20,7 +20,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@shared/*": ["../../packages/shared-types/src/*"]
-    }
+    },
+    "noEmit": true
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]

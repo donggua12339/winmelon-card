@@ -40,15 +40,15 @@ const statusText = computed(() => {
   }
 });
 
-const statusType = computed(() => {
+const statusType = computed<'primary' | 'success' | 'warning' | 'info' | 'danger'>(() => {
   if (!info.value) return 'info';
   switch (info.value.status) {
     case 'PENDING':
-      return remainingSec.value > 0 ? 'warning' : 'error';
+      return remainingSec.value > 0 ? 'warning' : 'danger';
     case 'SUCCESS':
       return 'success';
     default:
-      return 'error';
+      return 'danger';
   }
 });
 

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 const auth = useAuthStore();
 const isLoggedIn = computed(() => auth.isAuthenticated);
@@ -19,6 +20,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
         <span class="brand-text"><span class="text-gradient-aurora">WM</span> Card</span>
       </div>
       <div class="topnav-right">
+        <ThemeToggle />
         <template v-if="isLoggedIn">
           <RouterLink :to="dashboardUrl" class="topnav-btn topnav-btn-primary"> 进入工作台 → </RouterLink>
         </template>
@@ -40,7 +42,6 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
         <p class="subtitle">现代化自动发卡 · 多商户入驻 · 安全加密 · 即买即发</p>
         <div class="cta">
           <RouterLink to="/shop/main" class="btn-primary">进入店铺 →</RouterLink>
-          <RouterLink to="/merchant/apply" class="btn-merchant">✨ 商户入驻申请</RouterLink>
           <RouterLink to="/query" class="btn-ghost">订单查询</RouterLink>
         </div>
       </div>
@@ -49,22 +50,22 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
     <!-- 特性卡片 -->
     <section class="features">
       <div class="glass feature-card">
-        <div class="feature-icon glow-purple">⚡</div>
+        <div class="feature-icon">⚡</div>
         <h3>即时发卡</h3>
         <p>支付成功秒级自动发货，AES-256-GCM 加密存储，安全无忧</p>
       </div>
       <div class="glass feature-card">
-        <div class="feature-icon glow-cyan">🛡️</div>
+        <div class="feature-icon">🛡️</div>
         <h3>安全防护</h3>
         <p>JWT 鉴权 + RBAC + 限流防刷 + 全操作审计日志</p>
       </div>
       <div class="glass feature-card">
-        <div class="feature-icon glow-pink">📦</div>
+        <div class="feature-icon">📦</div>
         <h3>多商户</h3>
         <p>支持多商户入驻，独立店铺，路径式访问 /shop/:code</p>
       </div>
       <div class="glass feature-card">
-        <div class="feature-icon glow-purple">💳</div>
+        <div class="feature-icon">💳</div>
         <h3>多支付</h3>
         <p>易支付 / 微信 / 支付宝 / 模拟通道，回调验签 + 幂等</p>
       </div>
@@ -170,7 +171,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .home {
   min-height: 100vh;
   display: flex;
@@ -186,9 +187,10 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   justify-content: space-between;
   align-items: center;
   padding: 14px 32px;
-  background: rgba(15, 17, 23, 0.7);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--wm-border-glass);
+  background: var(--wm-glass-bg);
+  backdrop-filter: blur(var(--wm-glass-blur));
+  -webkit-backdrop-filter: blur(var(--wm-glass-blur));
+  border-bottom: 1px solid var(--wm-border-default);
 }
 
 .topnav-brand {
@@ -206,6 +208,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .topnav-right {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 .topnav-btn {
@@ -215,39 +218,39 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s ease;
-  border: 1px solid var(--wm-border-glass);
+  border: 1px solid var(--wm-border-default);
   color: var(--wm-text-secondary);
   background: var(--wm-glass-bg);
-}
 
-.topnav-btn:hover {
-  color: var(--wm-text-primary);
-  border-color: var(--wm-border-glass-hover);
-  background: var(--wm-glass-bg-hover);
+  &:hover {
+    color: var(--wm-text-primary);
+    border-color: var(--wm-border-hover);
+    background: var(--wm-glass-bg-hover);
+  }
 }
 
 .topnav-btn-merchant {
-  color: #06b6d4;
-  border-color: rgba(6, 182, 212, 0.4);
-  background: rgba(6, 182, 212, 0.1);
-}
+  color: var(--wm-accent-secondary);
+  border-color: rgba(14, 165, 233, 0.4);
+  background: rgba(14, 165, 233, 0.1);
 
-.topnav-btn-merchant:hover {
-  background: rgba(6, 182, 212, 0.2);
-  color: #06b6d4;
+  &:hover {
+    background: rgba(14, 165, 233, 0.2);
+    color: var(--wm-accent-secondary);
+  }
 }
 
 .topnav-btn-primary {
   background: var(--wm-gradient-primary);
-  color: white;
+  color: var(--wm-text-on-primary);
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
-}
+  box-shadow: var(--wm-shadow-primary);
 
-.topnav-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
-  color: white;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--wm-shadow-lg);
+    color: var(--wm-text-on-primary);
+  }
 }
 
 /* Hero */
@@ -272,7 +275,8 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   padding: 6px 16px;
   background: var(--wm-glass-bg);
   backdrop-filter: blur(var(--wm-glass-blur));
-  border: 1px solid var(--wm-border-glass);
+  -webkit-backdrop-filter: blur(var(--wm-glass-blur));
+  border: 1px solid var(--wm-border-default);
   border-radius: var(--wm-radius-pill);
   font-size: 13px;
   color: var(--wm-text-secondary);
@@ -296,9 +300,10 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 
 .cta {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: center;
 }
 
 .btn-primary,
@@ -308,50 +313,32 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.3s ease;
-  display: inline-block;
+  transition: all 0.2s ease;
+  display: block;
+  width: 200px;
+  text-align: center;
 }
 
 .btn-primary {
   background: var(--wm-gradient-primary);
-  color: white;
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
-}
+  color: var(--wm-text-on-primary);
+  box-shadow: var(--wm-shadow-primary);
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.6);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--wm-shadow-lg);
+  }
 }
 
 .btn-ghost {
   background: var(--wm-glass-bg);
-  backdrop-filter: blur(var(--wm-glass-blur));
-  border: 1px solid var(--wm-border-glass);
+  border: 1px solid var(--wm-border-default);
   color: var(--wm-text-primary);
-}
 
-.btn-ghost:hover {
-  background: var(--wm-glass-bg-hover);
-  border-color: var(--wm-border-glass-hover);
-}
-
-.btn-merchant {
-  padding: 12px 32px;
-  border-radius: var(--wm-radius-md);
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  display: inline-block;
-  background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
-  color: white;
-  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
-  border: 1px solid rgba(6, 182, 212, 0.5);
-}
-
-.btn-merchant:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.6);
+  &:hover {
+    background: var(--wm-glass-bg-hover);
+    border-color: var(--wm-border-hover);
+  }
 }
 
 /* 商户招募 */
@@ -365,8 +352,6 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .recruit-card {
   padding: 40px 32px;
   text-align: center;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
-  border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
 .recruit-title {
@@ -399,7 +384,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   align-items: flex-start;
   padding: 16px;
   background: var(--wm-glass-bg);
-  border: 1px solid var(--wm-border-glass);
+  border: 1px solid var(--wm-border-default);
   border-radius: var(--wm-radius-md);
 }
 
@@ -438,7 +423,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   gap: 8px;
   padding: 8px 16px;
   background: var(--wm-glass-bg);
-  border: 1px solid var(--wm-border-glass);
+  border: 1px solid var(--wm-border-default);
   border-radius: var(--wm-radius-pill);
 }
 
@@ -468,14 +453,14 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
   font-weight: 700;
   text-decoration: none;
   background: var(--wm-gradient-primary);
-  color: white;
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
-  transition: all 0.3s ease;
-}
+  color: var(--wm-text-on-primary);
+  box-shadow: var(--wm-shadow-primary);
+  transition: all 0.2s ease;
 
-.btn-merchant-large:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.6);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--wm-shadow-lg);
+  }
 }
 
 /* 特性 */
@@ -492,12 +477,12 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .feature-card {
   padding: 28px 24px;
   text-align: center;
-  transition: all 0.4s ease;
-}
+  transition: all 0.2s ease;
 
-.feature-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--wm-border-glass-hover);
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--wm-border-hover);
+  }
 }
 
 .feature-icon {
@@ -556,7 +541,7 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .tech-list span {
   padding: 4px 12px;
   background: var(--wm-glass-bg);
-  border: 1px solid var(--wm-border-glass);
+  border: 1px solid var(--wm-border-default);
   border-radius: var(--wm-radius-pill);
   font-size: 13px;
   color: var(--wm-text-secondary);
@@ -574,11 +559,11 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .footer a {
   color: var(--wm-text-secondary);
   text-decoration: none;
-  transition: color 0.3s ease;
-}
+  transition: color 0.2s ease;
 
-.footer a:hover {
-  color: var(--wm-accent-cyan);
+  &:hover {
+    color: var(--wm-accent-primary);
+  }
 }
 
 .divider {
@@ -589,22 +574,33 @@ const dashboardUrl = computed(() => (isSuperAdmin.value ? '/admin/dashboard' : '
 .footer-link {
   color: var(--wm-text-secondary);
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
   padding: 0 4px;
-}
 
-.footer-link:hover {
-  color: var(--wm-accent-cyan);
+  &:hover {
+    color: var(--wm-accent-primary);
+  }
 }
 
 .role-tag {
   display: inline-block;
   padding: 2px 10px;
   background: var(--wm-gradient-primary);
-  color: white;
+  color: var(--wm-text-on-primary);
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
