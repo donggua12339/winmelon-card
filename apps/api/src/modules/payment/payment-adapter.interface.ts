@@ -26,6 +26,13 @@ export interface PaymentAdapter {
 
   /** 同步跳转（return_url）参数解析，可选实现 */
   parseReturn?(query: Record<string, string>, config: Record<string, unknown>): NotifyResult;
+
+  /**
+   * 通道原路退款（阶段 2 实际退钱）
+   * - 不支持自动退款的通道（如 USDT 链上）抛 BusinessError，调用方需走 manualPayout
+   * - 退款成功后返回通道退款流水号（tradeNo）
+   */
+  refund(params: RefundParams, config: Record<string, unknown>): Promise<RefundResult>;
 }
 
 export interface CreatePaymentParams {
@@ -55,4 +62,28 @@ export interface NotifyResult {
   amount: string;
   success: boolean;
   raw: unknown;
+}
+
+/** 退款入参 */
+export interface RefundParams {
+  /** 我方退款单号（雪花 ID） */
+  refundNo: string;
+  /** 原订单号 */
+  orderNo: string;
+  /** 原通道流水号（部分通道必填） */
+  originalTradeNo?: string;
+  /** 退款金额（元，2 位小数） */
+  amount: string;
+  /** 退款原因（透传给通道） */
+  reason?: string;
+}
+
+/** 退款结果 */
+export interface RefundResult {
+  /** 通道退款流水号 */
+  tradeNo: string;
+  /** 通道返回的原始数据（便于排查） */
+  raw: unknown;
+  /** 退款是否同步成功（部分通道异步回调才知结果） */
+  success: boolean;
 }

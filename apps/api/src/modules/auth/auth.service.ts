@@ -248,6 +248,33 @@ export class AuthService {
         return 900_000;
     }
   }
+
+  /**
+   * P2-8: 仅签发 access token（用于账号激活后自动登录）
+   * 不签发 refresh token，不写 Redis 白名单
+   * 调用方需通过 cookie 重新 login 后才有 refresh
+   */
+  async issueAccessTokenOnly(
+    user: User,
+    _ctx: { ip: string; userAgent?: string },
+  ): Promise<{ accessToken: string; expiresIn: number }> {
+    const roles = [user.role];
+    const payload: TokenPayload = {
+      sub: user.id,
+      username: user.username,
+      email: user.email,
+      roles,
+      merchantId: user.merchantId ?? undefined,
+      type: 'access',
+      epoch: user.tokenEpoch,
+    };
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: this.config.get<string>('JWT_SECRET'),
+      expiresIn: this.accessExpiresIn,
+    });
+    const expiresIn = Math.floor(this.parseExpiryToMs(this.accessExpiresIn) / 1000);
+    return { accessToken, expiresIn };
+  }
 }
 
 // 避免 TS 抱怨未使用

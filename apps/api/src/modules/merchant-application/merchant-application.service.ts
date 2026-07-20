@@ -1,13 +1,16 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomInt } from 'crypto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
+import { ActivationService } from '../auth/activation.service';
 import { EmailVerificationService } from './email-verification.service';
 import { ApplyMerchantDto } from './dto/apply-merchant.dto';
+import { MERCHANT_APPROVED_EVENT, type MerchantApprovedPayload } from './events/merchant-application.events';
 
 const ACTIVATION_TOKEN_TTL_MIN = 30; // 激活 token 30 分钟过期
 
@@ -21,6 +24,8 @@ export class MerchantApplicationService {
     private readonly auditLog: AuditLogService,
     private readonly mail: MailService,
     private readonly emailVerification: EmailVerificationService,
+    private readonly activationService: ActivationService,
+    private readonly eventEmitter: EventEmitter2,
     config: ConfigService,
   ) {
     this.publicBaseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:5173');
@@ -246,8 +251,11 @@ export class MerchantApplicationService {
       throw new BadRequestException(`申请状态为 ${app.status}，无法审核`);
     }
 
-    const initPassword = this.generatePassword();
-    const passwordHash = await bcrypt.hash(initPassword, 12);
+    // P2-8: 密码改为激活链接流程
+    // 1. 生成不可登录的随机密码 hash（用户拿到也不知道）
+    // 2. 发激活链接，用户点链接设置真实密码
+    const randomSecret = this.generatePassword() + '-' + Date.now();
+    const passwordHash = await bcrypt.hash(randomSecret, 12);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const merchant = await tx.merchant.create({
@@ -303,11 +311,51 @@ export class MerchantApplicationService {
       },
     });
 
+    // P2-8: 生成激活 token（48h 一次性），发邮件给申请人
+    const activation = await this.activationService.generate({
+      email: app.contactEmail,
+      userId: result.user.id,
+      type: 'MERCHANT_APPROVE',
+    });
+    const activationUrl = `${this.publicBaseUrl}/activate?token=${activation.token}`;
+
+    // 发邮件（如果之前的事件处理器是发密码，改成发激活链接）
+    this.mail
+      .send({
+        to: app.contactEmail,
+        subject: `【WM 卡密平台】商户入驻激活 - ${app.merchantName}`,
+        html: `
+          <div style="max-width:520px;margin:0 auto;font-family:sans-serif;padding:24px;background:#1a1d29;color:#fff;border-radius:12px;">
+            <h2 style="margin:0 0 16px;color:#10b981;">🎉 商户入驻审核通过</h2>
+            <p>您的商户账号 <strong>${app.merchantName}</strong> 已创建。请点击下方链接设置密码（48 小时内有效，一次性）：</p>
+            <p style="margin:24px 0;">
+              <a href="${activationUrl}" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
+                设置密码激活账号
+              </a>
+            </p>
+            <p style="color:#94a3b8;font-size:13px;">链接打不开？复制到浏览器：<br/><code style="word-break:break-all;color:#06b6d4;">${activationUrl}</code></p>
+            <hr style="border:none;border-top:1px solid #334155;margin:24px 0;"/>
+            <p style="color:#94a3b8;font-size:13px;">本邮件由 WM 卡密平台发送。如非本人操作请忽略。</p>
+          </div>
+        `,
+        text: `商户 ${app.merchantName} 入驻审核通过。请访问 ${activationUrl} 设置密码激活账号（48 小时内有效）`,
+      })
+      .catch((err) => this.logger.error(`发送激活邮件失败: ${err.message}`));
+
+    // 触发站内信 + 事件（不再含 initialPassword）
+    this.eventEmitter.emit(MERCHANT_APPROVED_EVENT, {
+      merchantEmail: app.contactEmail,
+      merchantName: app.merchantName,
+      initialPassword: '', // P2-8: 留空兼容，调用方已忽略此字段
+      loginUrl: activationUrl,
+    } satisfies MerchantApprovedPayload);
+
     return {
       merchantId: result.merchant.id,
       shopId: result.shop.id,
       username: result.user.username,
-      initialPassword: initPassword,
+      activationUrl,
+      expiresAt: activation.expiresAt.toISOString(),
     };
   }
 

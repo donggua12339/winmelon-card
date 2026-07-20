@@ -1,11 +1,17 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { ConfigService } from '@nestjs/config';
-import { NotificationTriggerService } from '../notification/notification-trigger.service';
 import { WithdrawalMethod, WithdrawalStatus, Prisma } from '@prisma/client';
+import {
+  WITHDRAWAL_CREATED_EVENT,
+  WITHDRAWAL_STATUS_CHANGED_EVENT,
+  type WithdrawalCreatedPayload,
+  type WithdrawalStatusChangedPayload,
+} from './events/withdrawal.events';
 
 /** 平台全局提现配置（可改为 system_configs 动态配置） */
 interface PlatformWithdrawConfig {
@@ -29,7 +35,7 @@ export class WithdrawalService {
     private readonly mail: MailService,
     private readonly auditLog: AuditLogService,
     private readonly config: ConfigService,
-    private readonly trigger: NotificationTriggerService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /** 获取平台提现配置（可后续接入 system_configs 动态配置） */
@@ -127,7 +133,9 @@ export class WithdrawalService {
     this.logger.log(`商户申请提现: merchant=${merchantId} amount=${payload.amount} fee=${fee}`);
 
     // 触发站内信：通知平台管理员审核
-    void this.trigger.notifyWithdrawalPending(withdrawal.id);
+    this.eventEmitter.emit(WITHDRAWAL_CREATED_EVENT, {
+      withdrawalId: withdrawal.id,
+    } satisfies WithdrawalCreatedPayload);
 
     return {
       id: withdrawal.id,
@@ -195,7 +203,10 @@ export class WithdrawalService {
     });
 
     // 通知商户：提现已审核通过
-    void this.trigger.notifyWithdrawalResult(withdrawalId, 'APPROVING');
+    this.eventEmitter.emit(WITHDRAWAL_STATUS_CHANGED_EVENT, {
+      withdrawalId,
+      status: 'APPROVING',
+    } satisfies WithdrawalStatusChangedPayload);
 
     return { ok: true };
   }
@@ -268,7 +279,11 @@ export class WithdrawalService {
     });
 
     // 通知商户：提现被拒绝
-    void this.trigger.notifyWithdrawalResult(withdrawalId, 'REJECTED', reason);
+    this.eventEmitter.emit(WITHDRAWAL_STATUS_CHANGED_EVENT, {
+      withdrawalId,
+      status: 'REJECTED',
+      reason,
+    } satisfies WithdrawalStatusChangedPayload);
 
     return { ok: true };
   }
@@ -327,7 +342,10 @@ export class WithdrawalService {
     this.logger.log(`提现已打款: id=${withdrawalId} transferRef=${transferRef} admin=${adminCtx.username}`);
 
     // 通知商户：提现已打款
-    void this.trigger.notifyWithdrawalResult(withdrawalId, 'PAID');
+    this.eventEmitter.emit(WITHDRAWAL_STATUS_CHANGED_EVENT, {
+      withdrawalId,
+      status: 'PAID',
+    } satisfies WithdrawalStatusChangedPayload);
 
     return { ok: true };
   }

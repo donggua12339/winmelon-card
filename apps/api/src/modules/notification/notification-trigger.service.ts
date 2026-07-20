@@ -3,6 +3,23 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { NotificationService } from './notification.service';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
+import {
+  TICKET_CREATED_EVENT,
+  TICKET_REPLIED_EVENT,
+  type TicketCreatedPayload,
+  type TicketRepliedPayload,
+} from '../ticket/events/ticket.events';
+import {
+  WITHDRAWAL_CREATED_EVENT,
+  WITHDRAWAL_STATUS_CHANGED_EVENT,
+  type WithdrawalCreatedPayload,
+  type WithdrawalStatusChangedPayload,
+} from '../withdrawal/events/withdrawal.events';
+import {
+  MERCHANT_APPROVED_EVENT,
+  type MerchantApprovedPayload,
+} from '../merchant-application/events/merchant-application.events';
+import { COMMISSION_EARNED_EVENT, type CommissionEarnedPayload } from '../invite/events/invite.events';
 
 /**
  * 通知事件触发器
@@ -55,12 +72,12 @@ export class NotificationTriggerService {
 
   /**
    * 工单创建成功 → 通知商户
-   * 替代 ticket.service.ts 中直接的 mail.send 调用
    */
-  async notifyTicketCreated(ticketId: string): Promise<void> {
+  @OnEvent(TICKET_CREATED_EVENT)
+  async handleTicketCreated(payload: TicketCreatedPayload): Promise<void> {
     try {
       const ticket = await this.prisma.ticket.findUnique({
-        where: { id: ticketId },
+        where: { id: payload.ticketId },
         include: {
           shop: {
             select: {
@@ -88,13 +105,15 @@ export class NotificationTriggerService {
 
   /**
    * 工单回复 → 通知对应方
-   * @param senderRole 'buyer' | 'merchant' | 'platform' 发送方
-   * 内部查询 ticket 决定通知对象
+   * - 买家回复 → 通知商户
+   * - 商户回复 → 通知买家（站内信表里 buyerId/buyerEmail 字段为空，跳过）
+   * - 平台回复（非内部）→ 同时通知买家和商户
    */
-  async notifyTicketReply(ticketId: string, senderRole: 'buyer' | 'merchant' | 'platform'): Promise<void> {
+  @OnEvent(TICKET_REPLIED_EVENT)
+  async handleTicketReplied(payload: TicketRepliedPayload): Promise<void> {
     try {
       const ticket = await this.prisma.ticket.findUnique({
-        where: { id: ticketId },
+        where: { id: payload.ticketId },
         select: {
           ticketNo: true,
           subject: true,
@@ -104,12 +123,12 @@ export class NotificationTriggerService {
       if (!ticket) return;
 
       // 买家/平台回复 → 通知商户
-      if (senderRole !== 'merchant' && ticket.shop?.merchantId) {
+      if (payload.senderRole !== 'merchant' && ticket.shop?.merchantId) {
         await this.notification.notifyMerchant({
           merchantId: ticket.shop.merchantId,
           type: 'TICKET',
           title: `工单 ${ticket.ticketNo} 有新回复`,
-          content: `工单「${ticket.subject}」收到 ${senderRole === 'platform' ? '平台' : '买家'}回复，请及时处理。`,
+          content: `工单「${ticket.subject}」收到 ${payload.senderRole === 'platform' ? '平台' : '买家'}回复，请及时处理。`,
           link: `/merchant/tickets`,
         });
       }
@@ -121,10 +140,11 @@ export class NotificationTriggerService {
   /**
    * 提现申请 → 通知平台
    */
-  async notifyWithdrawalPending(withdrawalId: string): Promise<void> {
+  @OnEvent(WITHDRAWAL_CREATED_EVENT)
+  async handleWithdrawalCreated(payload: WithdrawalCreatedPayload): Promise<void> {
     try {
       const w = await this.prisma.withdrawal.findUnique({
-        where: { id: withdrawalId },
+        where: { id: payload.withdrawalId },
         include: {
           merchant: { select: { name: true } },
         },
@@ -143,16 +163,13 @@ export class NotificationTriggerService {
   }
 
   /**
-   * 提现审核结果 → 通知商户
+   * 提现状态变更 → 通知商户
    */
-  async notifyWithdrawalResult(
-    withdrawalId: string,
-    result: 'APPROVING' | 'PAID' | 'REJECTED',
-    reason?: string,
-  ): Promise<void> {
+  @OnEvent(WITHDRAWAL_STATUS_CHANGED_EVENT)
+  async handleWithdrawalStatusChanged(payload: WithdrawalStatusChangedPayload): Promise<void> {
     try {
       const w = await this.prisma.withdrawal.findUnique({
-        where: { id: withdrawalId },
+        where: { id: payload.withdrawalId },
         include: {
           merchant: { select: { name: true, contactEmail: true } },
         },
@@ -167,14 +184,14 @@ export class NotificationTriggerService {
       const contentMap = {
         APPROVING: `您的提现 ¥${w.amount} 申请已通过审核，平台将尽快打款。`,
         PAID: `您的提现 ¥${w.actual} 已完成打款，请查收。`,
-        REJECTED: `您的提现 ¥${w.amount} 申请被拒绝。原因：${reason ?? '无'}`,
+        REJECTED: `您的提现 ¥${w.amount} 申请被拒绝。原因：${payload.reason ?? '无'}`,
       } as const;
 
       await this.notification.notifyMerchant({
         merchantId: w.merchantId,
         type: 'WITHDRAWAL',
-        title: titleMap[result],
-        content: contentMap[result],
+        title: titleMap[payload.status],
+        content: contentMap[payload.status],
         link: `/merchant/withdrawals`,
         sendEmail: true,
         emailTo: w.merchant.contactEmail,
@@ -187,39 +204,40 @@ export class NotificationTriggerService {
   /**
    * 商户审核通过 → 通知申请人
    */
-  async notifyMerchantApproved(
-    merchantEmail: string,
-    merchantName: string,
-    initialPassword: string,
-    _loginUrl: string,
-  ): Promise<void> {
-    await this.notification.notifyMerchant({
-      merchantId: '', // 商户刚创建还没 ID，用 email 通知
-      type: 'SYSTEM',
-      title: `🎉 商户入驻成功 - ${merchantName}`,
-      content: `您的商户账号已开通，初始密码：${initialPassword}，请尽快登录修改。`,
-      link: '/',
-      sendEmail: true,
-      emailTo: merchantEmail,
-    });
+  @OnEvent(MERCHANT_APPROVED_EVENT)
+  async handleMerchantApproved(payload: MerchantApprovedPayload): Promise<void> {
+    try {
+      await this.notification.notifyMerchant({
+        merchantId: '', // 商户刚创建还没 ID，用 email 通知
+        type: 'SYSTEM',
+        title: `🎉 商户入驻成功 - ${payload.merchantName}`,
+        content: `您的商户账号已开通，初始密码：${payload.initialPassword}，请尽快登录修改。`,
+        link: payload.loginUrl || '/admin/login',
+        sendEmail: true,
+        emailTo: payload.merchantEmail,
+      });
+    } catch (err) {
+      this.logger.error(`商户审核通过通知失败: ${(err as Error).message}`);
+    }
   }
 
   /**
    * 返佣结算 → 通知邀请人
    */
-  async notifyCommissionEarned(inviterMerchantId: string, amount: number, sourceMerchantName: string): Promise<void> {
+  @OnEvent(COMMISSION_EARNED_EVENT)
+  async handleCommissionEarned(payload: CommissionEarnedPayload): Promise<void> {
     try {
       const merchant = await this.prisma.merchant.findUnique({
-        where: { id: inviterMerchantId },
+        where: { id: payload.inviterMerchantId },
         select: { contactEmail: true, name: true },
       });
       if (!merchant) return;
 
       await this.notification.notifyMerchant({
-        merchantId: inviterMerchantId,
+        merchantId: payload.inviterMerchantId,
         type: 'COMMISSION',
-        title: `收到返佣 ¥${amount.toFixed(2)}`,
-        content: `「${sourceMerchantName}」的订单产生了 ¥${amount.toFixed(2)} 返佣，已自动结算到您的余额。`,
+        title: `收到返佣 ¥${payload.amount.toFixed(2)}`,
+        content: `「${payload.sourceMerchantName}」的订单产生了 ¥${payload.amount.toFixed(2)} 返佣，已自动结算到您的余额。`,
         link: `/merchant/invite`,
         sendEmail: false,
       });

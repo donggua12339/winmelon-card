@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { initSentry, sentryErrorHandler } from './common/sentry/sentry';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware';
@@ -18,6 +19,8 @@ import { validateCriticalConfig } from './infrastructure/config/config.validator
 import { SsrService } from './modules/shop/ssr.service';
 
 async function bootstrap(): Promise<void> {
+  // M2: Sentry 必须在 NestFactory.create 之前 init
+  initSentry();
   const app = await NestFactory.create<NestApplication>(AppModule, {
     bufferLogs: true,
     rawBody: true,
@@ -47,6 +50,27 @@ async function bootstrap(): Promise<void> {
   // 提前获取 prismaService 供 CORS callback 使用
   const prismaServiceForCors = app.get(PrismaService);
 
+  // CORS preflight 短路：必须在 enableCors 之前，否则 OPTIONS 带 body 会 500
+  // 自己设置 CORS headers + 204，避免依赖 cors 中间件在 NestJS app 初始化前的时序问题
+  app.use((req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+    if (req.method === 'OPTIONS') {
+      const origin = req.headers.origin;
+      const allowedOrigins = frontendUrl.split(',').map((s) => s.trim());
+      if (!origin || allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin || '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-Id,X-Idempotency-Key');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        res.status(204).end();
+      } else {
+        res.status(403).end();
+      }
+      return;
+    }
+    next();
+  });
+
   app.enableCors({
     origin: (origin, callback) => {
       // P2-1: 动态允许商户已验证的自定义域名 + 平台主域
@@ -72,6 +96,7 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['X-Request-Id'],
   });
 
+  // M2: Sentry 必须在 helmet 之前
   app.use(helmet());
   app.use(cookieParser());
   app.use(RequestIdMiddleware);
@@ -118,6 +143,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  // M2: Sentry 错误处理必须在全局 filter 之前
+  app.use(sentryErrorHandler);
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalInterceptors(new ResponseInterceptor());
@@ -154,8 +181,38 @@ async function bootstrap(): Promise<void> {
     Logger.log(`📖 Swagger docs: http://localhost:${port}/${prefix}/docs`, 'Bootstrap');
   }
 
-  await app.listen(port);
+  // M3 优雅停机：启用 shutdown hooks
+  app.enableShutdownHooks();
+
+  // M3 优雅停机：监听 SIGTERM/SIGINT，先标 notReady，再等待进行中请求完成
+  const SHUTDOWN_TIMEOUT_MS = 30_000;
+  let isShuttingDown = false;
+  const server = await app.listen(port);
   Logger.log(`🚀 API running on http://localhost:${port}/${prefix}`, 'Bootstrap');
+
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    Logger.warn(`收到 ${signal}，开始优雅停机（最多 ${SHUTDOWN_TIMEOUT_MS}ms）`, 'Bootstrap');
+    const timer = setTimeout(() => {
+      Logger.error('优雅停机超时，强制退出', 'Bootstrap');
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+    try {
+      // 关闭 HTTP server（停止接受新连接，等待现有请求完成）
+      server.close();
+      // 关闭 NestJS 应用（清理资源、关闭 Prisma/Redis 连接）
+      await app.close();
+      clearTimeout(timer);
+      Logger.log('优雅停机完成', 'Bootstrap');
+      process.exit(0);
+    } catch (err) {
+      Logger.error(`优雅停机失败: ${(err as Error).message}`, 'Bootstrap');
+      process.exit(1);
+    }
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 void bootstrap();

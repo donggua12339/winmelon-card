@@ -5,6 +5,8 @@ import type {
   CreatePaymentParams,
   CreatePaymentResult,
   NotifyResult,
+  RefundParams,
+  RefundResult,
 } from '../payment-adapter.interface';
 
 export interface EpayConfig {
@@ -99,6 +101,68 @@ export class EpayAdapter implements PaymentAdapter {
       .sort(([a], [b]) => a.localeCompare(b));
     const str = filtered.map(([k, v]) => `${k}=${v}`).join('&') + key;
     return createHash('md5').update(str, 'utf8').digest('hex');
+  }
+
+  /**
+   * 易支付原路退款
+   * 接口：POST ${apiDomain}/api.php?act=refund
+   * 参数：pid, key, out_trade_no（原订单号）, money（退款金额）, refund_id（我方退款单号）
+   * 返回：code=1 成功，msg + trade_no
+   *
+   * 注意：
+   * - 同步返回成功 = 通道受理；部分通道异步回调才知最终结果
+   * - 易支付大多数版本为同步返回（code=1 即视为成功）
+   * - 失败情况：code=0 需根据 msg 重试或转人工
+   */
+  async refund(params: RefundParams, config: Record<string, unknown>): Promise<RefundResult> {
+    const cfg = config as unknown as EpayConfig;
+    const args: Record<string, string> = {
+      pid: cfg.pid,
+      key: cfg.key,
+      out_trade_no: params.orderNo,
+      money: params.amount,
+      refund_id: params.refundNo,
+    };
+    args.sign = this.sign(args, cfg.key);
+
+    const url = `${cfg.apiDomain}/api.php?act=refund`;
+    this.logger.log(
+      `易支付退款请求: ${url} orderNo=${params.orderNo} amount=${params.amount} refundNo=${params.refundNo}`,
+    );
+
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(args).toString(),
+      });
+    } catch (e) {
+      throw new Error(`易支付退款请求失败: ${(e as Error).message}`);
+    }
+
+    if (!resp.ok) {
+      throw new Error(`易支付退款 HTTP ${resp.status}`);
+    }
+
+    let body: { code?: number; msg?: string; trade_no?: string };
+    try {
+      body = (await resp.json()) as typeof body;
+    } catch (e) {
+      throw new Error(`易支付退款响应解析失败: ${(e as Error).message}`);
+    }
+
+    const success = body.code === 1;
+    if (!success) {
+      this.logger.warn(`易支付退款失败: code=${body.code} msg=${body.msg}`);
+      throw new Error(`易支付退款失败: ${body.msg ?? '未知错误'}`);
+    }
+
+    return {
+      tradeNo: body.trade_no ?? `EPAY_REFUND_${params.refundNo}`,
+      raw: body,
+      success: true,
+    };
   }
 }
 

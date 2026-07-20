@@ -1,11 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { SnowflakeService } from '../../infrastructure/id/snowflake.service';
 import { MailService } from '../../infrastructure/mail/mail.service';
-import { NotificationTriggerService } from '../notification/notification-trigger.service';
+import { RefundService } from '../refund/refund.service';
+import {
+  TICKET_CREATED_EVENT,
+  TICKET_REPLIED_EVENT,
+  type TicketCreatedPayload,
+  type TicketRepliedPayload,
+} from './events/ticket.events';
 
 const AUTO_REFUND_HOURS = 24; // 24h 自动退款
 const MERCHANT_UNRESPONSED_FREEZE_THRESHOLD = 5; // 商户 5 次未响应自动冻结
@@ -27,7 +34,8 @@ export class TicketService {
     private readonly auditLog: AuditLogService,
     private readonly snowflake: SnowflakeService,
     private readonly mail: MailService,
-    private readonly trigger: NotificationTriggerService,
+    private readonly refundService: RefundService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ============== 买家侧 ==============
@@ -119,8 +127,8 @@ export class TicketService {
       userAgent: ctx.ua,
     });
 
-    // 触发站内信 + 邮件通知商户
-    void this.trigger.notifyTicketCreated(ticket.id);
+    // 触发站内信 + 邮件通知商户（P2-3: 走事件，避免直接调用 trigger）
+    this.eventEmitter.emit(TICKET_CREATED_EVENT, { ticketId: ticket.id } satisfies TicketCreatedPayload);
 
     return { ticketNo, id: ticket.id };
   }
@@ -175,7 +183,10 @@ export class TicketService {
     });
 
     // 通知商户：买家回复了
-    void this.trigger.notifyTicketReply(ticket.id, 'buyer');
+    this.eventEmitter.emit(TICKET_REPLIED_EVENT, {
+      ticketId: ticket.id,
+      senderRole: 'buyer',
+    } satisfies TicketRepliedPayload);
 
     return { ok: true };
   }
@@ -257,6 +268,9 @@ export class TicketService {
       userAgent: ctx.ua,
     });
 
+    // 通知买家：商户回复了
+    this.eventEmitter.emit(TICKET_REPLIED_EVENT, { ticketId, senderRole: 'merchant' } satisfies TicketRepliedPayload);
+
     return { ok: true };
   }
 
@@ -337,6 +351,14 @@ export class TicketService {
       userAgent: ctx.ua,
     });
 
+    // 内部备注不发通知；非内部备注 → 通知买卖双方
+    if (!isInternal) {
+      this.eventEmitter.emit(TICKET_REPLIED_EVENT, {
+        ticketId,
+        senderRole: 'platform',
+      } satisfies TicketRepliedPayload);
+    }
+
     return { ok: true };
   }
 
@@ -404,8 +426,23 @@ export class TicketService {
   ): Promise<void> {
     const refundAmount = ticket.order ? Number(ticket.order.totalAmount) : 0;
 
+    // 调用 RefundService.createAndPayDirect：创建 Refund + 订单 REFUNDED + 商户余额扣减 + 卡密重置 + 发事件
+    // viewed_at 有值的订单会抛 ForbiddenException（Q13 约束），此时工单不自动退款，转人工
+    if (ticket.order && ['PAID', 'DELIVERED'].includes(ticket.order.status) && refundAmount > 0) {
+      try {
+        await this.refundService.createAndPayDirect(ticket.order.id, {
+          reason: `工单 ${ticket.ticketNo} 超时未响应，系统自动退款`,
+          initiator: 'PLATFORM',
+          manualPayout: true, // 阶段 1：线下打款标记
+        });
+      } catch (err) {
+        // viewed_at 有值或余额超上限：工单仍标记 AUTO_REFUNDED 但不实际退款，转人工
+        this.logger.warn(`工单 ${ticket.ticketNo} 自动退款跳过: ${(err as Error).message}，转人工处理`);
+      }
+    }
+
+    // 工单状态更新 + 内部消息 + 商户冻结检查（保留原逻辑）
     await this.prisma.$transaction(async (tx) => {
-      // 工单标记 AUTO_REFUNDED
       await tx.ticket.update({
         where: { id: ticket.id },
         data: {
@@ -415,7 +452,6 @@ export class TicketService {
         },
       });
 
-      // 平台内部备注
       await tx.ticketMessage.create({
         data: {
           ticketId: ticket.id,
@@ -425,22 +461,6 @@ export class TicketService {
           isInternal: false,
         },
       });
-
-      // 订单标记 REFUNDED（仅已支付的订单）
-      if (ticket.order && ['PAID', 'DELIVERED'].includes(ticket.order.status)) {
-        await tx.order.update({
-          where: { id: ticket.order.id },
-          data: { status: 'REFUNDED' },
-        });
-
-        // 商户余额扣减（允许负数）
-        if (refundAmount > 0 && ticket.shop?.merchantId) {
-          await tx.merchant.update({
-            where: { id: ticket.shop.merchantId },
-            data: { balance: { decrement: new Prisma.Decimal(refundAmount) } },
-          });
-        }
-      }
 
       // 商户未响应计数 + 检查冻结
       if (ticket.shop?.merchant?.id) {

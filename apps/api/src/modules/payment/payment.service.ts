@@ -340,6 +340,62 @@ export class PaymentService implements OnModuleInit {
     });
   }
 
+  /**
+   * 阶段 2 实际退钱：调通道原路退款
+   * 1. 查原 Payment 记录（取 channel + tradeNo）
+   * 2. 加载通道配置
+   * 3. 调 adapter.refund()
+   * 4. 失败抛 Error（由 RefundService 捕获后 markFailed）
+   *
+   * 仅 non-manualPayout 流程使用；USDT 走 manualPayout=true
+   */
+  async refundChannel(params: {
+    orderId: string;
+    refundNo: string;
+    amount: string;
+    reason?: string;
+  }): Promise<{ tradeNo: string; channel: string }> {
+    // 1. 查原 Payment（取最近一次 SUCCESS 的）
+    const payment = await this.prisma.payment.findFirst({
+      where: { orderId: params.orderId, status: 'SUCCESS' },
+      orderBy: { paidAt: 'desc' },
+      select: { channel: true, tradeNo: true, amount: true },
+    });
+    if (!payment) {
+      throw new NotFoundException(`订单 ${params.orderId} 无成功支付记录，无法自动退款`);
+    }
+    if (!payment.tradeNo) {
+      throw new BadRequestException(`原支付流水号缺失（channel=${payment.channel}）`);
+    }
+
+    // 2. 加载通道
+    const channel = await this.prisma.paymentChannel.findUnique({ where: { code: payment.channel } });
+    if (!channel || !channel.isAvailable) {
+      throw new BadRequestException(`支付通道 ${payment.channel} 不可用`);
+    }
+    const adapter = this.getAdapter(payment.channel);
+    const config = this.decryptConfig(channel.config);
+
+    // 3. 调 adapter
+    const result = await adapter.refund(
+      {
+        refundNo: params.refundNo,
+        orderNo: '', // 由通道要求决定；易支付用 payment.tradeNo 反查
+        originalTradeNo: payment.tradeNo,
+        amount: params.amount,
+        reason: params.reason,
+      },
+      config,
+    );
+
+    if (!result.success) {
+      throw new Error(`通道返回退款失败`);
+    }
+
+    this.logger.log(`通道退款成功: channel=${payment.channel} refundNo=${params.refundNo} tradeNo=${result.tradeNo}`);
+    return { tradeNo: result.tradeNo, channel: payment.channel };
+  }
+
   // ====== 后台：通道管理 ======
 
   async listChannels() {

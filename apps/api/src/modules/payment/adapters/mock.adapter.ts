@@ -5,6 +5,8 @@ import type {
   CreatePaymentParams,
   CreatePaymentResult,
   NotifyResult,
+  RefundParams,
+  RefundResult,
 } from '../payment-adapter.interface';
 
 export interface MockConfig {
@@ -58,5 +60,18 @@ export class MockAdapter implements PaymentAdapter {
 
   private sign(orderNo: string, money: string, key: string): string {
     return createHash('md5').update(`${orderNo}${money}${key}`, 'utf8').digest('hex');
+  }
+
+  /**
+   * 模拟通道退款：直接返回成功 + 伪 tradeNo
+   * 便于 E2E 测试阶段 2 退款流程
+   */
+  async refund(params: RefundParams, _config: Record<string, unknown>): Promise<RefundResult> {
+    this.logger.log(`[MOCK] 退款 refundNo=${params.refundNo} orderNo=${params.orderNo} amount=${params.amount}`);
+    return {
+      tradeNo: `MOCK_REFUND_${params.refundNo}`,
+      raw: { mock: true, ...params },
+      success: true,
+    };
   }
 }

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
-import { NotificationTriggerService } from '../notification/notification-trigger.service';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
+import { ORDER_REFUNDED_EVENT, type OrderRefundedPayload } from '../order/events/order-refunded.event';
+import { COMMISSION_EARNED_EVENT, type CommissionEarnedPayload } from './events/invite.events';
 import { randomBytes } from 'crypto';
 
 const DEFAULT_COMMISSION_RATE = 0.05; // 默认 5% 返佣
@@ -18,7 +18,7 @@ export class InviteService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-    private readonly trigger: NotificationTriggerService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ============== 邀请码管理 ==============
@@ -303,18 +303,75 @@ export class InviteService {
 
       // 通知 1级邀请人
       const firstLevel = levels[0]!;
-      void this.trigger.notifyCommissionEarned(firstLevel.inviterId, totalCommission, order.shop.merchant.name);
+      this.eventEmitter.emit(COMMISSION_EARNED_EVENT, {
+        inviterMerchantId: firstLevel.inviterId,
+        amount: totalCommission,
+        sourceMerchantName: order.shop.merchant.name,
+      } satisfies CommissionEarnedPayload);
     });
   }
 
-  // ============== 定时任务：订单退款时冲正返佣 ==============
+  // ============== 退款冲正（监听 ORDER_REFUNDED_EVENT）==============
 
   /**
-   * 每 5 分钟扫描：已 REFUNDED 订单的返佣记录冲正
-   * MVP 简化：暂不实现退款冲正（退款流程未完善）
+   * 订单退款时冲正返佣
+   * - 查该订单所有 SETTLED 的 CommissionRecord
+   * - 邀请人 balance 扣减（允许负数，Q12 决策 b）
+   * - source 商户 balance 增加（退回当初扣的返佣）
+   * - CommissionRecord.status=REVERSED + reversedAt
+   * - 幂等：已 REVERSED 的跳过
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
-  async reverseRefundedCommissions(): Promise<void> {
-    // TODO: 退款流程完善后实现
+  @OnEvent(ORDER_REFUNDED_EVENT)
+  async handleOrderRefunded(payload: OrderRefundedPayload): Promise<void> {
+    try {
+      await this.reverseCommission(payload);
+    } catch (err) {
+      this.logger.error(`返佣冲正失败 refundNo=${payload.refundNo}: ${(err as Error).message}`);
+    }
+  }
+
+  private async reverseCommission(payload: OrderRefundedPayload): Promise<void> {
+    // 查该订单所有 SETTLED 的返佣记录
+    const records = await this.prisma.commissionRecord.findMany({
+      where: { orderId: payload.orderId, status: 'SETTLED' },
+      select: { id: true, inviterMerchantId: true, sourceMerchantId: true, amount: true, level: true },
+    });
+
+    if (records.length === 0) {
+      this.logger.debug(`订单 ${payload.orderNo} 无 SETTLED 返佣记录，跳过冲正`);
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      let totalReversed = 0;
+      for (const record of records) {
+        // 邀请人 balance 扣减（允许负数，Q12 决策 b）
+        await tx.merchant.update({
+          where: { id: record.inviterMerchantId },
+          data: { balance: { decrement: record.amount } },
+        });
+
+        // source 商户 balance 增加（退回当初扣的返佣）
+        await tx.merchant.update({
+          where: { id: record.sourceMerchantId },
+          data: { balance: { increment: record.amount } },
+        });
+
+        // CommissionRecord -> REVERSED + reversedAt
+        await tx.commissionRecord.update({
+          where: { id: record.id },
+          data: {
+            status: 'REVERSED',
+            reversedAt: new Date(),
+          },
+        });
+
+        totalReversed += Number(record.amount);
+      }
+
+      this.logger.log(
+        `返佣冲正成功: orderNo=${payload.orderNo} refundNo=${payload.refundNo} 共 ${records.length} 级, 冲正总额 ¥${totalReversed.toFixed(2)}`,
+      );
+    });
   }
 }

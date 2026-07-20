@@ -5,9 +5,10 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
 import { IdModule } from '../../infrastructure/id/id.module';
 import { MailModule } from '../../infrastructure/mail/mail.module';
 import { NotificationModule } from '../notification/notification.module';
+import { RefundModule } from '../refund/refund.module';
 
 @Module({
-  imports: [AuditLogModule, IdModule, MailModule, NotificationModule],
+  imports: [AuditLogModule, IdModule, MailModule, NotificationModule, RefundModule],
   controllers: [TicketController],
   providers: [TicketService],
   exports: [TicketService],

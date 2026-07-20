@@ -4,6 +4,8 @@ import type {
   CreatePaymentParams,
   CreatePaymentResult,
   NotifyResult,
+  RefundParams,
+  RefundResult,
 } from '../payment-adapter.interface';
 
 export interface UsdtConfig {
@@ -59,5 +61,13 @@ export class UsdtAdapter implements PaymentAdapter {
 
   parseNotify(): NotifyResult {
     throw new Error('USDT 通道不使用异步回调，请通过轮询确认');
+  }
+
+  /**
+   * USDT 通道退款：链上交易无法由通道 API 触发原路退回
+   * 强制走 manualPayout 流程（admin 手动从商户钱包转给买家）
+   */
+  async refund(_params: RefundParams, _config: Record<string, unknown>): Promise<RefundResult> {
+    throw new Error('USDT 通道不支持自动退款，请使用 manualPayout=true 由 admin 手动打款');
   }
 }
