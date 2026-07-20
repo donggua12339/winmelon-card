@@ -109,6 +109,11 @@ const routes = [
         component: () => import('@/views/admin/WebhookMonitor.vue'),
       },
       {
+        path: 'platform-config',
+        name: 'admin-platform-config',
+        component: () => import('@/views/admin/PlatformConfig.vue'),
+      },
+      {
         path: 'stats',
         name: 'admin-stats',
         component: () => import('@/views/admin/AdvancedStats.vue'),

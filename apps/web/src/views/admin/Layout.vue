@@ -30,6 +30,7 @@ function getPageTitle(path: string): string {
     '/admin/system': '系统配置',
     '/admin/audit-logs': '审计日志',
     '/admin/webhook': 'Webhook 监控',
+    '/admin/platform-config': '平台配置',
     '/admin/stats': '高级统计',
     '/admin/risk': '行为风控',
     '/admin/merchant-applications': '商户审核',
@@ -67,6 +68,7 @@ const menuItems = [
   { path: '/admin/stats', icon: '📈', label: '高级统计' },
   { path: '/admin/audit-logs', icon: '📋', label: '审计日志' },
   { path: '/admin/webhook', icon: '🔔', label: 'Webhook 监控' },
+  { path: '/admin/platform-config', icon: '⚙️', label: '平台配置' },
   { path: '/admin/system', icon: '⚙️', label: '系统配置' },
 ];
 </script>

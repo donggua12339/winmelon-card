@@ -66,6 +66,17 @@ export class MerchantApplicationService {
     // 3. 校验验证码
     await this.emailVerification.verifyCode(dto.contactEmail, dto.verificationCode);
 
+    // 3.5 校验邀请码（可选）
+    if (dto.inviteCode) {
+      const invite = await this.prisma.inviteCode.findUnique({
+        where: { code: dto.inviteCode },
+        select: { id: true, inviterMerchantId: true },
+      });
+      if (!invite) {
+        throw new BadRequestException('邀请码无效');
+      }
+    }
+
     // 4. 生成激活 token（明文）+ 存 hash
     const activationToken = randomBytes(32).toString('base64url');
     const tokenHash = this.hashActivationToken(activationToken);
@@ -82,6 +93,7 @@ export class MerchantApplicationService {
         status: 'PENDING', // 等用户激活
         activationTokenHash: tokenHash,
         activationExpiresAt: expiresAt,
+        inviteCode: dto.inviteCode || null,
       },
     });
 
@@ -187,6 +199,19 @@ export class MerchantApplicationService {
 
     // 4. 事务：创建 Merchant + Shop + User + 标记申请通过
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // 解析邀请码（如果入驻时填了）
+    let inviterMerchantId: string | null = null;
+    if (app.inviteCode) {
+      const invite = await this.prisma.inviteCode.findUnique({
+        where: { code: app.inviteCode },
+        select: { id: true, inviterMerchantId: true },
+      });
+      if (invite) {
+        inviterMerchantId = invite.inviterMerchantId;
+      }
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const merchant = await tx.merchant.create({
         data: {
@@ -196,6 +221,8 @@ export class MerchantApplicationService {
           status: 'ACTIVE',
           commissionRate: 0,
           balance: 0,
+          inviterMerchantId,
+          invitedAt: inviterMerchantId ? new Date() : null,
         },
       });
       const shop = await tx.shop.create({

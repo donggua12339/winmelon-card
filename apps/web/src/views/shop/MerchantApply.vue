@@ -19,6 +19,7 @@ const form = reactive({
   shopName: '',
   shopCode: '',
   businessScope: '',
+  inviteCode: '',
 });
 
 const rules: FormRules<typeof form> = {
@@ -151,6 +152,10 @@ function gotoLogin(): void {
           </el-form-item>
           <el-form-item label="经营范围（可选）" prop="businessScope">
             <el-input v-model="form.businessScope" type="textarea" :rows="3" placeholder="简述您要销售的商品类型" />
+          </el-form-item>
+          <el-form-item label="邀请码（可选）" prop="inviteCode">
+            <el-input v-model="form.inviteCode" placeholder="如有邀请人，填写其邀请码" maxlength="32" />
+            <div class="tip">填写后将与邀请人建立多级分销关系，邀请人可获得返佣</div>
           </el-form-item>
 
           <el-button type="primary" size="large" :loading="loading" native-type="submit" class="submit-btn">

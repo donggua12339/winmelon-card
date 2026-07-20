@@ -10,7 +10,7 @@ function isNullSentinel(v: unknown): boolean {
   return v === NULL_VALUE;
 }
 
-interface SystemConfigRecord {
+export interface SystemConfigRecord {
   key: string;
   value: string;
   updatedAt: Date;

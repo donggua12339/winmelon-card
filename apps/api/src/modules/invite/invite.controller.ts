@@ -1,14 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, type CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { InviteService } from './invite.service';
 import { ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 class CreateCodeDto {
   @IsOptional() @IsString() @MaxLength(255) note?: string;
+}
+
+class UpdateSettingsDto {
+  @IsOptional() allowBuyerInviteCode?: boolean;
+  @IsOptional()
+  @IsEnum(['TOP10', 'TOP10_WITH_NEIGHBORS', 'OFF'])
+  leaderboardDisplayMode?: 'TOP10' | 'TOP10_WITH_NEIGHBORS' | 'OFF';
+  @IsOptional() @IsString() @MaxLength(128) leaderboardName?: string | null;
 }
 
 @ApiTags('invite')
@@ -78,5 +86,57 @@ export class InviteController {
       };
     }
     return this.service.getInviteStats(user.merchantId);
+  }
+
+  /** 关系链树（下级 + 下级的下级） */
+  @Get('merchant/invite/tree')
+  @UseGuards(RolesGuard)
+  @Roles('MERCHANT', 'STAFF')
+  async getInviteTree(@CurrentUser() user: CurrentUserPayload, @Query('depth') depth?: string) {
+    if (!user.merchantId) return { root: null, tree: [] };
+    return this.service.getInviteTree(user.merchantId, depth ? Number(depth) : 2);
+  }
+
+  /** Top 10 排行榜（公开，商户名脱敏） */
+  @Get('merchant/invite/leaderboard')
+  @UseGuards(RolesGuard)
+  @Roles('MERCHANT', 'STAFF')
+  async getLeaderboard(
+    @Query('dimension') dimension: 'invites' | 'teamSize' | 'teamGmv' = 'invites',
+    @Query('period') period: 'week' | 'month' | 'all' = 'all',
+  ) {
+    return this.service.getLeaderboard(dimension, period);
+  }
+
+  /** 自己的排名 + 上下 2 名 */
+  @Get('merchant/invite/leaderboard/me')
+  @UseGuards(RolesGuard)
+  @Roles('MERCHANT', 'STAFF')
+  async getMyLeaderboard(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('dimension') dimension: 'invites' | 'teamSize' | 'teamGmv' = 'invites',
+    @Query('period') period: 'week' | 'month' | 'all' = 'all',
+  ) {
+    if (!user.merchantId) return { myRank: null, myValue: 0, neighbors: [] };
+    return this.service.getMyLeaderboard(user.merchantId, dimension, period);
+  }
+
+  /** 获取分销设置 */
+  @Get('merchant/invite/settings')
+  @UseGuards(RolesGuard)
+  @Roles('MERCHANT', 'STAFF')
+  async getSettings(@CurrentUser() user: CurrentUserPayload) {
+    if (!user.merchantId) return { error: 'no-merchant' };
+    return this.service.getSettings(user.merchantId);
+  }
+
+  /** 更新分销设置 */
+  @Put('merchant/invite/settings')
+  @UseGuards(RolesGuard)
+  @Roles('MERCHANT')
+  async updateSettings(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateSettingsDto) {
+    if (!user.merchantId) return { error: 'no-merchant' };
+    await this.service.updateSettings(user.merchantId, dto);
+    return { ok: true };
   }
 }

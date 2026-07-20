@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { get, post } from '@/api/http';
+import { get, post, put } from '@/api/http';
 
 interface Application {
   id: string;
@@ -28,6 +28,51 @@ const resultVisible = ref(false);
 const resultData = ref<{ username: string; initialPassword: string; merchantId: string } | null>(null);
 
 const rejectVisible = ref(false);
+
+// 邀请人管理
+const inviteDialogVisible = ref(false);
+const inviteForm = ref<{ merchantId: string; merchantName: string; newInviterId: string }>({
+  merchantId: '',
+  merchantName: '',
+  newInviterId: '',
+});
+const inviteSaving = ref(false);
+
+function openInviteMgr(row: Application): void {
+  if (!row.approvedMerchantId) {
+    ElMessage.warning('该申请未关联商户');
+    return;
+  }
+  inviteForm.value = {
+    merchantId: row.approvedMerchantId,
+    merchantName: row.merchantName,
+    newInviterId: '',
+  };
+  inviteDialogVisible.value = true;
+}
+
+async function saveInvite(): Promise<void> {
+  const { merchantId, newInviterId } = inviteForm.value;
+  if (!newInviterId.trim()) {
+    try {
+      await ElMessageBox.confirm('新邀请人 ID 为空，将解绑当前邀请关系。继续？', '确认解绑', {
+        type: 'warning',
+      });
+    } catch {
+      return;
+    }
+  }
+  inviteSaving.value = true;
+  try {
+    await put(`/admin/merchants/${merchantId}/inviter`, {
+      inviterMerchantId: newInviterId.trim() || null,
+    });
+    ElMessage.success(newInviterId.trim() ? '邀请人已改绑' : '邀请关系已解绑');
+    inviteDialogVisible.value = false;
+  } finally {
+    inviteSaving.value = false;
+  }
+}
 const rejectId = ref('');
 const rejectReason = ref('');
 
@@ -128,11 +173,15 @@ onMounted(fetchList);
           <el-tag :type="statusTag(row.status).type as any">{{ statusTag(row.status).text }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="240" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'PENDING'">
             <el-button link type="success" size="small" @click="onApprove(row as Application)">通过</el-button>
             <el-button link type="danger" size="small" @click="openReject(row as Application)">拒绝</el-button>
+          </template>
+          <template v-else-if="row.status === 'APPROVED'">
+            <el-button link type="primary" size="small" @click="openInviteMgr(row as Application)"> 邀请人 </el-button>
+            <span class="muted">{{ formatTime(row.reviewedAt) }}</span>
           </template>
           <span v-else class="muted">{{ formatTime(row.reviewedAt) }}</span>
         </template>
@@ -188,6 +237,31 @@ onMounted(fetchList);
       <template #footer>
         <el-button @click="rejectVisible = false">取消</el-button>
         <el-button type="danger" @click="onReject">确认拒绝</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="inviteDialogVisible" title="管理邀请关系" width="480px">
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom: 16px">
+        <template #title>
+          商户：<b>{{ inviteForm.merchantName }}</b>
+        </template>
+      </el-alert>
+      <el-form label-position="top">
+        <el-form-item label="新邀请人商户 ID">
+          <el-input v-model="inviteForm.newInviterId" placeholder="留空 = 解绑当前邀请人" clearable />
+          <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 4px">
+            粘贴新邀请人的商户 ID（UUID 格式）。留空则解绑当前邀请关系。
+          </div>
+        </el-form-item>
+      </el-form>
+      <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 8px">
+        注意：改绑/解绑仅对未来新订单生效，已结算的历史返佣不冲正。
+      </div>
+      <template #footer>
+        <el-button @click="inviteDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="inviteSaving" @click="saveInvite">
+          {{ inviteForm.newInviterId.trim() ? '改绑' : '解绑' }}
+        </el-button>
       </template>
     </el-dialog>
   </div>

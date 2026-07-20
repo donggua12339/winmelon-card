@@ -74,6 +74,14 @@ model Merchant {
   inviterMerchantId String?
   inviter           Merchant?  @relation("MerchantTree", fields: [inviterMerchantId], references: [id], onDelete: SetNull)
   invitees          Merchant[] @relation("MerchantTree")
+  // 邀请关系绑定时间（客服改绑时更新）
+  invitedAt         DateTime?
+  // 商户级"买家下单填邀请码"开关（全局开关在 system_configs.buyer_invite_code_global_enabled）
+  allowBuyerInviteCode Boolean @default(false)
+  // 排行榜显示偏好：TOP10 / TOP10_WITH_NEIGHBORS / OFF
+  leaderboardDisplayMode String @default("TOP10") @db.VarChar(32)
+  // 排行榜显示名（不填则用商户名脱敏）
+  leaderboardName   String?  @db.VarChar(128)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
@@ -484,6 +492,8 @@ model MerchantApplication {
   reviewedById    String?  @db.VarChar(64)
   reviewedAt      DateTime?
   approvedMerchantId String? @db.VarChar(36) // 审核通过后创建的 merchant.id
+  // 入驻时填的邀请码（审批通过时写入 merchant.inviterMerchantId）
+  inviteCode        String?  @db.VarChar(32)
   // P2-8: 一次性激活 token（hash 存储，不用明文）
   activationTokenHash String?  @db.VarChar(64)
   activationExpiresAt DateTime?

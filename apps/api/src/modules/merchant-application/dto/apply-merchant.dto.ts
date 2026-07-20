@@ -31,6 +31,13 @@ export class ApplyMerchantDto {
     message: '验证码必须是 6 位数字',
   })
   verificationCode!: string;
+
+  /** 入驻邀请码（可选，绑定后建立多级分销关系） */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  inviteCode?: string;
 }
 
 export class SendCodeDto {
