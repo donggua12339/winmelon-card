@@ -1,8 +1,27 @@
 {
   "root": true,
   "extends": ["eslint:recommended"],
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/*.d.ts",
+    "apps/web/e2e/**",
+    "apps/web/playwright.config.ts",
+    "deploy/scripts/**",
+    "scripts/**",
+    "apps/api/prisma/**"
+  ],
   "overrides": [
+    {
+      "files": ["*.ts", "*.vue"],
+      "parser": "@typescript-eslint/parser",
+      "extends": ["plugin:@typescript-eslint/recommended"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "warn",
+        "no-console": ["error", { "allow": ["warn", "error"] }]
+      }
+    },
     {
       "files": ["apps/api/src/modules/graphql/**/*.ts"],
       "rules": {
