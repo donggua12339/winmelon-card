@@ -9,7 +9,8 @@ const formRef = ref<FormInstance>();
 const loading = ref(false);
 const sendingCode = ref(false);
 const countdown = ref(0);
-const created = ref<{ username: string; initialPassword: string } | null>(null);
+// P2-8: 后端改为发激活链接,不再返回明文密码
+const submitted = ref<{ email: string } | null>(null);
 
 const form = reactive({
   contactEmail: '',
@@ -57,6 +58,10 @@ async function sendCode(): Promise<void> {
   try {
     await post('/merchant/apply/send-code', { email: form.contactEmail });
     ElMessage.success('验证码已发送到您的邮箱（10 分钟内有效）');
+    ElMessage.info({
+      message: '如果 5 分钟内没收到邮件,请检查垃圾邮件箱,或联系客服微信 donggua16600 手动激活',
+      duration: 8000,
+    });
     countdown.value = 60;
     const timer = setInterval(() => {
       countdown.value -= 1;
@@ -74,18 +79,11 @@ async function onSubmit(): Promise<void> {
 
   loading.value = true;
   try {
-    const data = await post<{ username: string; initialPassword: string }>('/merchant/apply', form);
-    created.value = {
-      username: data.username,
-      initialPassword: data.initialPassword,
-    };
+    await post('/merchant/apply', form);
+    submitted.value = { email: form.contactEmail };
   } finally {
     loading.value = false;
   }
-}
-
-function copy(text: string, label: string): void {
-  navigator.clipboard.writeText(text).then(() => ElMessage.success(`${label}已复制`));
 }
 
 function gotoLogin(): void {
@@ -98,38 +96,39 @@ function gotoLogin(): void {
     <div class="glass apply-card">
       <RouterLink to="/" class="back">← 返回首页</RouterLink>
 
-      <!-- 注册成功 -->
-      <div v-if="created" class="success-view">
-        <div class="success-icon">✓</div>
-        <h2 class="success-title">账号已开通</h2>
-        <p class="success-subtitle">请妥善保管以下登录凭证</p>
-        <div class="credential-box">
-          <div class="credential-row">
-            <span class="label">用户名</span>
-            <code>{{ created.username }}</code>
-            <el-button size="small" link @click="copy(created.username, '用户名')">复制</el-button>
+      <!-- 提交成功(等用户去邮箱激活) -->
+      <div v-if="submitted" class="success-view">
+        <div class="success-icon">✉</div>
+        <h2 class="success-title">激活邮件已发送</h2>
+        <p class="success-subtitle">我们已向 {{ submitted.email }} 发送激活链接</p>
+        <el-alert type="warning" :closable="false" class="warn-alert" show-icon>
+          <template #title>
+            <strong>请检查邮箱并在 30 分钟内点击激活链接设置密码</strong>
+          </template>
+          <div style="margin-top: 8px; line-height: 1.6">
+            如果 5 分钟内没收到邮件:
+            <ol style="margin: 6px 0 0 18px; padding: 0">
+              <li>检查垃圾邮件箱 / 订阅邮件文件夹</li>
+              <li>确认邮箱地址拼写正确</li>
+              <li>Gmail / Outlook 用户可能延迟 1-2 分钟</li>
+              <li>仍收不到?联系客服微信 <code>donggua16600</code> 手动激活</li>
+            </ol>
           </div>
-          <div class="credential-row">
-            <span class="label">初始密码</span>
-            <code>{{ created.initialPassword }}</code>
-            <el-button size="small" link @click="copy(created.initialPassword, '密码')">复制</el-button>
-          </div>
-        </div>
-        <el-alert type="warning" :closable="false" class="warn-alert"> 密码仅显示一次，忘记需在后台重置。 </el-alert>
-        <el-button type="primary" size="large" class="submit-btn" @click="gotoLogin"> 立即登录后台 → </el-button>
+        </el-alert>
+        <el-button type="primary" size="large" class="submit-btn" @click="gotoLogin"> 激活完成后去登录 </el-button>
       </div>
 
       <!-- 注册表单 -->
       <div v-else>
         <div class="header">
           <h1 class="title"><span class="text-gradient-aurora">商户入驻</span></h1>
-          <p class="subtitle">邮箱验证后立即开通，无需等待审核</p>
+          <p class="subtitle">邮箱验证后立即提交申请,激活邮件设置密码</p>
         </div>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="onSubmit">
           <h3 class="section-title">商户与店铺</h3>
           <el-form-item label="联系邮箱" prop="contactEmail">
-            <el-input v-model="form.contactEmail" placeholder="用于接收验证码和登录" />
+            <el-input v-model="form.contactEmail" placeholder="用于接收验证码和激活邮件" />
           </el-form-item>
           <el-form-item label="邮箱验证码" prop="verificationCode">
             <div class="code-row">
@@ -138,6 +137,7 @@ function gotoLogin(): void {
                 {{ codeBtnText }}
               </el-button>
             </div>
+            <div class="tip">未收到验证码?检查垃圾邮件箱,或联系客服微信 donggua16600</div>
           </el-form-item>
           <el-form-item label="商户名称" prop="merchantName">
             <el-input v-model="form.merchantName" placeholder="如：XX 数码" />
@@ -154,7 +154,7 @@ function gotoLogin(): void {
           </el-form-item>
 
           <el-button type="primary" size="large" :loading="loading" native-type="submit" class="submit-btn">
-            提交并开通账号
+            提交申请并发送激活邮件
           </el-button>
         </el-form>
       </div>
@@ -170,14 +170,11 @@ function gotoLogin(): void {
   align-items: flex-start;
   justify-content: center;
 }
-
 .apply-card {
+  max-width: 540px;
   width: 100%;
-  max-width: 560px;
-  padding: 32px;
-  animation: fade-in-up 0.6s ease-out;
+  padding: 32px 28px;
 }
-
 .back {
   display: inline-block;
   color: var(--wm-text-tertiary);
@@ -185,123 +182,89 @@ function gotoLogin(): void {
   font-size: 13px;
   margin-bottom: 16px;
 }
-
+.back:hover {
+  color: var(--wm-accent-primary);
+}
 .header {
-  text-align: center;
   margin-bottom: 24px;
 }
-
 .title {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 26px;
+  font-weight: 700;
   margin: 0 0 8px;
 }
-
 .subtitle {
   color: var(--wm-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   margin: 0;
 }
-
 .section-title {
   font-size: 14px;
-  color: var(--wm-text-secondary);
-  margin: 16px 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--wm-text-primary);
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--wm-border-default);
 }
-
-.tip {
-  color: var(--wm-text-tertiary);
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.submit-btn {
-  width: 100%;
-  margin-top: 16px;
-}
-
 .code-row {
   display: flex;
   gap: 8px;
   width: 100%;
 }
-
-.code-row :deep(.el-input) {
+.code-row .el-input {
   flex: 1;
 }
-
-/* 成功视图 */
-.success-view {
-  text-align: center;
-  padding: 16px 0;
+.tip {
+  font-size: 12px;
+  color: var(--wm-text-tertiary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.submit-btn {
+  width: 100%;
+  margin-top: 8px;
+  height: 44px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
+/* 成功页 */
+.success-view {
+  text-align: center;
+  padding: 24px 0;
+}
 .success-icon {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--wm-gradient-primary);
-  color: white;
+  background: var(--wm-accent-success);
+  color: #fff;
   font-size: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
 }
-
 .success-title {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   margin: 0 0 8px;
-  background: var(--wm-gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--wm-text-primary);
 }
-
 .success-subtitle {
   color: var(--wm-text-secondary);
   font-size: 14px;
   margin: 0 0 24px;
 }
-
-.credential-box {
-  background: var(--wm-glass-bg);
-  border: 1px solid var(--wm-border-glass);
-  border-radius: var(--wm-radius-md);
-  padding: 16px;
-  margin-bottom: 16px;
-  text-align: left;
-}
-
-.credential-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-}
-
-.credential-row + .credential-row {
-  border-top: 1px solid var(--wm-border-glass);
-}
-
-.credential-row .label {
-  width: 70px;
-  color: var(--wm-text-tertiary);
-  font-size: 13px;
-}
-
-.credential-row code {
-  flex: 1;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  color: var(--wm-accent-cyan);
-  word-break: break-all;
-}
-
 .warn-alert {
-  margin: 8px 0 16px;
+  margin-bottom: 20px;
   text-align: left;
+}
+.warn-alert code {
+  background: var(--wm-bg-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--wm-font-mono);
+  font-size: 13px;
 }
 </style>

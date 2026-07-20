@@ -113,6 +113,36 @@ export class MerchantApplicationService {
   }
 
   /**
+   * P2-8: 校验商户激活 token(不消耗 token,只返回申请信息供前端显示)
+   */
+  async validateActivationToken(
+    applicationId: string,
+    activationToken: string,
+  ): Promise<{
+    valid: boolean;
+    email: string;
+    merchantName: string;
+    shopCode: string;
+  }> {
+    const app = await this.prisma.merchantApplication.findUnique({
+      where: { id: applicationId },
+    });
+    if (!app) throw new BadRequestException('激活链接无效');
+    if (app.status !== 'PENDING') throw new BadRequestException('该申请已激活或已处理');
+    if (!app.activationTokenHash || !app.activationExpiresAt) throw new BadRequestException('激活链接无效');
+    if (app.activationExpiresAt < new Date()) throw new BadRequestException('激活链接已过期，请重新申请');
+    if (this.hashActivationToken(activationToken) !== app.activationTokenHash) {
+      throw new BadRequestException('激活链接无效');
+    }
+    return {
+      valid: true,
+      email: app.contactEmail,
+      merchantName: app.merchantName,
+      shopCode: app.shopCode,
+    };
+  }
+
+  /**
    * P2-8: 激活商户账号
    * 验证 token + 设置密码 + 创建 Merchant/Shop/User + 标记 application 为 APPROVED
    */

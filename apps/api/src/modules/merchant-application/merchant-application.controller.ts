@@ -52,6 +52,14 @@ export class MerchantApplicationController {
     return this.service.apply(dto);
   }
 
+  /** P2-8: 校验商户激活 token(返回申请信息供前端显示) */
+  @Post('merchant/activate/validate')
+  @Public()
+  @Throttle({ perMin: 10 })
+  async validateActivate(@Body() dto: { applicationId: string; token: string }) {
+    return this.service.validateActivationToken(dto.applicationId, dto.token);
+  }
+
   /** P2-8: 激活商户账号（公开，通过邮件链接访问） */
   @Post('merchant/activate')
   @Public()

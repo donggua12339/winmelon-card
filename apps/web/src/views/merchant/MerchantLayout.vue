@@ -45,14 +45,7 @@ const menuItems = [
         </div>
       </div>
 
-      <el-menu
-        router
-        :default-active="$route.path"
-        class="side-menu"
-        background-color="transparent"
-        text-color="#94a3b8"
-        active-text-color="#fff"
-      >
+      <el-menu router :default-active="$route.path" class="side-menu">
         <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
           <span class="menu-icon">{{ item.icon }}</span>
           <span class="menu-label">{{ item.label }}</span>
@@ -133,17 +126,18 @@ void ({} as RouteLocationNormalizedLoaded);
 .merchant-layout {
   min-height: 100vh;
   display: flex;
-  background: #f1f5f9;
-  color: #1e293b;
+  background: var(--wm-bg-deep);
+  color: var(--wm-text-primary);
 }
 
+/* sidebar 跟随主题:亮色浅灰底,暗色深底 */
 .sidebar {
   width: 220px;
-  background: #0f172a;
+  background: var(--wm-bg-elevated);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+  border-right: 1px solid var(--wm-border-default);
 }
 
 .brand {
@@ -151,20 +145,19 @@ void ({} as RouteLocationNormalizedLoaded);
   align-items: center;
   gap: 12px;
   padding: 20px 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--wm-border-default);
 }
 
 .brand-icon {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: var(--theme-color, #6366f1);
+  background: var(--theme-color, var(--wm-accent-primary));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .brand-text {
@@ -174,13 +167,13 @@ void ({} as RouteLocationNormalizedLoaded);
 .brand-name {
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--wm-text-primary);
   letter-spacing: -0.01em;
 }
 
 .brand-tag {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--wm-text-tertiary);
   margin-top: 2px;
   letter-spacing: 0.05em;
 }
@@ -189,6 +182,11 @@ void ({} as RouteLocationNormalizedLoaded);
   flex: 1;
   border-right: none;
   padding: 12px 8px;
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--wm-text-secondary);
+  --el-menu-active-color: var(--wm-text-on-primary);
+  --el-menu-hover-bg-color: var(--wm-bg-hover);
+  --el-menu-hover-text-color: var(--wm-text-primary);
 }
 
 .side-menu :deep(.el-menu-item) {
@@ -198,17 +196,17 @@ void ({} as RouteLocationNormalizedLoaded);
   border-radius: 6px;
   padding: 0 12px !important;
   font-size: 13px;
+  color: var(--wm-text-secondary);
 }
 
 .side-menu :deep(.el-menu-item.is-active) {
-  background: var(--theme-color, #6366f1) !important;
-  color: #fff !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  background: var(--theme-color, var(--wm-accent-primary)) !important;
+  color: var(--wm-text-on-primary) !important;
 }
 
 .side-menu :deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #cbd5e1 !important;
+  background: var(--wm-bg-hover) !important;
+  color: var(--wm-text-primary) !important;
 }
 
 .menu-icon {
@@ -222,18 +220,18 @@ void ({} as RouteLocationNormalizedLoaded);
 
 .sidebar-footer {
   padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--wm-border-default);
 }
 
 .back-home {
-  color: #64748b;
+  color: var(--wm-text-tertiary);
   text-decoration: none;
   font-size: 12px;
   transition: color 0.2s ease;
 }
 
 .back-home:hover {
-  color: #cbd5e1;
+  color: var(--wm-text-primary);
 }
 
 /* 主区 */
@@ -246,8 +244,8 @@ void ({} as RouteLocationNormalizedLoaded);
 
 .topbar {
   height: 60px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--wm-bg-base);
+  border-bottom: 1px solid var(--wm-border-default);
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -264,7 +262,7 @@ void ({} as RouteLocationNormalizedLoaded);
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--wm-text-primary);
 }
 
 .topbar-right {
@@ -277,22 +275,22 @@ void ({} as RouteLocationNormalizedLoaded);
   align-items: center;
   gap: 10px;
   padding: 6px 12px 6px 6px;
-  background: #f1f5f9;
+  background: var(--wm-bg-hover);
   border-radius: 24px;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .user-chip:hover {
-  background: #e2e8f0;
+  background: var(--wm-bg-active);
 }
 
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--theme-color, #6366f1);
-  color: #fff;
+  background: var(--theme-color, var(--wm-accent-primary));
+  color: var(--wm-text-on-primary);
   font-weight: 600;
   font-size: 14px;
   display: flex;
@@ -308,7 +306,7 @@ void ({} as RouteLocationNormalizedLoaded);
 .user-name {
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--wm-text-primary);
   max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
@@ -317,12 +315,12 @@ void ({} as RouteLocationNormalizedLoaded);
 
 .user-role {
   font-size: 11px;
-  color: #64748b;
+  color: var(--wm-text-tertiary);
 }
 
 .user-caret {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--wm-text-tertiary);
 }
 
 /* 内容区 */
@@ -330,6 +328,6 @@ void ({} as RouteLocationNormalizedLoaded);
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  background: #f8fafc;
+  background: var(--wm-bg-deep);
 }
 </style>

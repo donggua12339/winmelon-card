@@ -9,6 +9,8 @@ interface ValidateResp {
   valid: boolean;
   email?: string;
   type?: string;
+  merchantName?: string;
+  shopCode?: string;
 }
 
 const route = useRoute();
@@ -16,6 +18,10 @@ const router = useRouter();
 const auth = useAuthStore();
 
 const token = ref<string>((route.query.token as string) ?? '');
+const applicationId = ref<string>((route.query.app as string) ?? '');
+// 有 app 参数 = 商户入驻激活(走 /merchant/activate);否则走通用 /auth/activate
+const isMerchantActivate = ref<boolean>(!!applicationId.value);
+
 const password = ref('');
 const confirmPassword = ref('');
 const loading = ref(false);
@@ -23,11 +29,35 @@ const validating = ref(true);
 const valid = ref(false);
 const email = ref('');
 const tokenType = ref('');
+const merchantName = ref('');
 
 async function validateToken() {
   if (!token.value) {
     ElMessage.error('激活链接缺少 token 参数');
     validating.value = false;
+    return;
+  }
+  // 商户激活:调 /merchant/activate/validate 拿申请信息
+  if (isMerchantActivate.value) {
+    if (!applicationId.value) {
+      ElMessage.error('激活链接缺少 application id');
+      validating.value = false;
+      return;
+    }
+    try {
+      const resp = await post<ValidateResp>('/merchant/activate/validate', {
+        applicationId: applicationId.value,
+        token: token.value,
+      });
+      valid.value = resp.valid;
+      email.value = resp.email ?? '';
+      merchantName.value = resp.merchantName ?? '';
+      tokenType.value = 'MERCHANT';
+    } catch {
+      valid.value = false;
+    } finally {
+      validating.value = false;
+    }
     return;
   }
   try {
@@ -53,19 +83,35 @@ async function submit() {
   }
   loading.value = true;
   try {
-    const result = await post<{
-      accessToken: string;
-      expiresIn: number;
-      defaultRedirect: string;
-      user: { id: string; username: string; email: string; roles: string[]; merchantId?: string };
-    }>('/auth/activate', { token: token.value, password: password.value });
-    auth.setSession({ accessToken: result.accessToken, user: result.user });
-    ElMessage.success('账号激活成功！');
-    // 跳到默认页（merchant dashboard 或 admin dashboard）
-    const dest =
-      result.defaultRedirect ??
-      (result.user.roles.includes('SUPER_ADMIN') ? '/admin/dashboard' : '/merchant/dashboard');
-    router.replace(dest);
+    if (isMerchantActivate.value) {
+      // 商户激活:token 通过 query 传,body 传 applicationId + password
+      const result = await post<{
+        accessToken: string;
+        expiresIn: number;
+        defaultRedirect: string;
+        user: { id: string; username: string; email: string; roles: string[]; merchantId?: string };
+      }>(`/merchant/activate?token=${encodeURIComponent(token.value)}`, {
+        applicationId: applicationId.value,
+        password: password.value,
+      });
+      auth.setSession({ accessToken: result.accessToken, user: result.user });
+      ElMessage.success('商户账号激活成功！');
+      const dest = result.defaultRedirect ?? '/merchant/dashboard';
+      router.replace(dest);
+    } else {
+      const result = await post<{
+        accessToken: string;
+        expiresIn: number;
+        defaultRedirect: string;
+        user: { id: string; username: string; email: string; roles: string[]; merchantId?: string };
+      }>('/auth/activate', { token: token.value, password: password.value });
+      auth.setSession({ accessToken: result.accessToken, user: result.user });
+      ElMessage.success('账号激活成功！');
+      const dest =
+        result.defaultRedirect ??
+        (result.user.roles.includes('SUPER_ADMIN') ? '/admin/dashboard' : '/merchant/dashboard');
+      router.replace(dest);
+    }
   } catch {
     // http 拦截器已提示
   } finally {

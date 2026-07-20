@@ -236,8 +236,8 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
 
-  // 公开页面（login、impersonate、首页、店铺、商品、订单查询等）直接放行
-  const publicPrefixes = ['/admin/login', '/auth/impersonate', '/payment/', '/shop/', '/query'];
+  // 公开页面（login、impersonate、首页、店铺、商品、订单查询、商户入驻等）直接放行
+  const publicPrefixes = ['/admin/login', '/auth/impersonate', '/payment/', '/shop/', '/query', '/merchant/apply'];
   const isPublic = to.path === '/' || publicPrefixes.some((p) => to.path.startsWith(p));
   if (isPublic) return true;
 

@@ -247,9 +247,17 @@ body {
 .el-table {
   background: transparent;
   color: var(--wm-text-primary);
+  --el-table-bg-color: var(--wm-bg-card);
+  --el-table-tr-bg-color: var(--wm-bg-card);
+  --el-table-header-bg-color: var(--wm-bg-elevated);
+  --el-table-row-hover-bg-color: var(--wm-bg-hover);
+  --el-table-border-color: var(--wm-border-default);
+  --el-table-text-color: var(--wm-text-primary);
+  --el-table-header-text-color: var(--wm-text-secondary);
+  --el-table-empty-text-color: var(--wm-text-tertiary);
 
   th.el-table__cell {
-    background: var(--wm-bg-card) !important;
+    background: var(--wm-bg-elevated) !important;
     border-bottom: 1px solid var(--wm-border-default) !important;
     color: var(--wm-text-secondary);
     font-weight: 600;
@@ -257,6 +265,7 @@ body {
 
   td.el-table__cell {
     border-bottom: 1px solid var(--wm-border-default) !important;
+    background: var(--wm-bg-card) !important;
   }
 
   .el-table__row:hover > td.el-table__cell {
@@ -266,6 +275,43 @@ body {
   &::before {
     display: none;
   }
+
+  /* 空状态 */
+  .el-table__empty-block {
+    background: var(--wm-bg-card);
+    min-height: 60px;
+  }
+
+  .el-table__empty-text {
+    color: var(--wm-text-tertiary);
+  }
+}
+
+/* 分页 */
+.el-pagination {
+  --el-pagination-bg-color: var(--wm-bg-card);
+  --el-pagination-text-color: var(--wm-text-secondary);
+  --el-pagination-button-color: var(--wm-text-secondary);
+  --el-pagination-hover-color: var(--wm-accent-primary);
+  --el-button-bg-color: var(--wm-bg-card);
+  --el-button-border-color: var(--wm-border-default);
+  --el-button-hover-bg-color: var(--wm-bg-hover);
+}
+
+.el-pagination button {
+  background: var(--wm-bg-card) !important;
+  border-color: var(--wm-border-default) !important;
+  color: var(--wm-text-secondary) !important;
+}
+
+.el-pagination .el-pager li {
+  background: var(--wm-bg-card) !important;
+  color: var(--wm-text-secondary) !important;
+}
+
+.el-pagination .el-pager li.is-active {
+  background: var(--wm-accent-primary) !important;
+  color: var(--wm-text-on-primary) !important;
 }
 
 // 对话框
