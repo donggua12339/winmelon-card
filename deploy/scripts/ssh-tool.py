@@ -15,10 +15,10 @@ from io import StringIO
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-HOST = '162.251.93.5'
+HOST = '162.251.93.199'
 USER = 'root'
 PASSWORD = '2fjBJJKUhr5yMRZc'
-PORT = 22
+PORT = 22022
 
 def connect():
     client = paramiko.SSHClient()

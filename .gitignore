@@ -85,3 +85,22 @@ deploy/ssl/winmelon.cn.*.pem
 # Docker 构建用的预生成 Prisma Client + Swagger 8（绕过容器内 prisma generate bug）
 # 本地保留用于 docker build，不入库
 apps/api/prebuilt-prisma/
+
+# ---- 前端编译产物防止（只在源码目录生成的 .js/.vue.js）----
+apps/web/src/**/*.js
+apps/web/src/**/*.vue.js
+!apps/web/src/**/*.d.ts
+
+# ---- 测试产物（Playwright 截图/报告）----
+apps/web/e2e/screenshots/
+apps/web/e2e/ui-inspection/
+apps/web/e2e/theme-preview/
+test-results/
+
+# ---- Python 缓存 ----
+__pycache__/
+*.pyc
+deploy/scripts/__pycache__/
+
+# ---- 临时/废弃目录 ----
+glitchtip/

@@ -1,20 +1,21 @@
 # WM 官方虚拟卡密交易平台 —— 项目状态
 
-> 修订日期：2026-07-14 ｜ 维护者：项目文档工程师
+> 修订日期：2026-07-15 ｜ 维护者：项目文档工程师
 > 注：`PROJECT-PLAN.md` 保留原始规划，本文档记录实际进展和当前状态
 
 ## 1. 当前状态一览
 
 ### 1.1 里程碑完成度
 
-| 里程碑            | 目标           | 状态      | 备注                                                |
-| ----------------- | -------------- | --------- | --------------------------------------------------- |
-| **M0** 工程化基线 | 仓库、CI、规范 | ✅ 完成   | 2026-07-08                                          |
-| **M1** MVP 闭环   | 单商户自营跑通 | ✅ 完成   | 2026-07-09，含 8 项验收测试                         |
-| **M2** 上线       | 公网可访问     | ✅ 完成   | 2026-07-10，部署到 `winmelon.cn`                    |
-| **M3** 加固       | 风控 / 监控    | ✅ 完成   | 2026-07-11，含风控/审计/邮件/备份                   |
-| **V2** 多商户     | 商户入驻       | ✅ 完成   | 2026-07-12，含申请/审核/独立工作台                  |
-| **V3** 增强       | 数据 / 开放    | 🔄 进行中 | 高级统计/开放 API/USDT/域名 ✅；提现/UV/公告 进行中 |
+| 里程碑            | 目标           | 状态    | 备注                                                    |
+| ----------------- | -------------- | ------- | ------------------------------------------------------- |
+| **M0** 工程化基线 | 仓库、CI、规范 | ✅ 完成 | 2026-07-08                                              |
+| **M1** MVP 闭环   | 单商户自营跑通 | ✅ 完成 | 2026-07-09，含 8 项验收测试                             |
+| **M2** 上线       | 公网可访问     | ✅ 完成 | 2026-07-10，部署到 `winmelon.cn`                        |
+| **M3** 加固       | 风控 / 监控    | ✅ 完成 | 2026-07-11，含风控/审计/邮件/备份                       |
+| **V2** 多商户     | 商户入驻       | ✅ 完成 | 2026-07-12，含申请/审核/独立工作台                      |
+| **V3** 增强       | 数据 / 开放    | ✅ 完成 | 2026-07-13，含高级统计/开放 API/USDT/域名/提现/UV/公告  |
+| **V4** 退款       | 退款流程       | ✅ 完成 | T3 实际退钱通道 + V4-7 财务对账 + T7 文档（2026-07-15） |
 
 ### 1.2 最新 30 次提交
 
@@ -53,15 +54,15 @@ e435069 feat(m2-local): M2 上线本地准备 - Docker/Nginx/脚本/证书
 
 ### 2.1 买家侧
 
-| 功能                         | 路径                | 状态 | 备注                        |
-| ---------------------------- | ------------------- | ---- | --------------------------- |
-| 首页（含公告/特性/商户招募） | `/`                 | ✅   | 顶部登录按钮组（商户/平台） |
-| 店铺页                       | `/shop/:code`       | ✅   | 商品列表/下单               |
-| 订单查询                     | `/query`            | ✅   | 邮箱 + 订单号               |
-| 模拟支付                     | `/payment/mock-pay` | ✅   | 测试通道                    |
-| USDT 支付                    | `/payment/usdt`     | ✅   | QR 码 + 倒计时 + 自动确认   |
-| 商户入驻申请                 | `/merchant/apply`   | ✅   | 邮箱验证码即时激活          |
-| 忘记密码                     | `/forgot-password`  | ✅   | 图形验证码 + 邮箱码         |
+| 功能                         | 路径                | 状态 | 备注                         |
+| ---------------------------- | ------------------- | ---- | ---------------------------- |
+| 首页（含公告/特性/商户招募） | `/`                 | ✅   | 顶部登录按钮组（商户/平台）  |
+| 店铺页                       | `/shop/:code`       | ✅   | 商品列表/下单                |
+| 订单查询                     | `/query`            | ✅   | 邮箱 + 订单号 + 申请退款入口 |
+| 模拟支付                     | `/payment/mock-pay` | ✅   | 测试通道                     |
+| USDT 支付                    | `/payment/usdt`     | ✅   | QR 码 + 倒计时 + 自动确认    |
+| 商户入驻申请                 | `/merchant/apply`   | ✅   | 邮箱验证码即时激活           |
+| 忘记密码                     | `/forgot-password`  | ✅   | 图形验证码 + 邮箱码          |
 
 ### 2.2 商户工作台 `/merchant/*`（需 MERCHANT 角色）
 
@@ -79,21 +80,22 @@ e435069 feat(m2-local): M2 上线本地准备 - Docker/Nginx/脚本/证书
 
 ### 2.3 平台后台 `/admin/*`（需 SUPER_ADMIN 角色）
 
-| 功能       | 路径                           | 状态 | 备注                  |
-| ---------- | ------------------------------ | ---- | --------------------- |
-| 数据看板   | `/admin/dashboard`             | ✅   | 全平台视角            |
-| 商品管理   | `/admin/products`              | ✅   | SUPER_ADMIN 选店铺    |
-| 卡密管理   | `/admin/stock`                 | ✅   | 跨店铺                |
-| 订单管理   | `/admin/orders`                | ✅   | 全平台                |
-| 支付配置   | `/admin/payments`              | ✅   | 通道启停              |
-| 商户审核   | `/admin/merchant-applications` | ✅   | 通过/拒绝             |
-| API Key    | `/admin/api-keys`              | ✅   | 查看所有              |
-| 自定义域名 | `/admin/domain`                | ✅   | 代理配置              |
-| 行为风控   | `/admin/risk`                  | ✅   | IP/邮箱黑名单 + 熔断  |
-| 高级统计   | `/admin/stats`                 | ✅   | 时段/漏斗/复购/客单价 |
-| 审计日志   | `/admin/audit-logs`            | ✅   | 全操作日志            |
-| 系统配置   | `/admin/system`                | ✅   | KV 配置               |
-| 提现审核   | `/admin/withdrawals`           | ✅   | 通过/拒绝/标记已打款  |
+| 功能         | 路径                           | 状态 | 备注                                 |
+| ------------ | ------------------------------ | ---- | ------------------------------------ |
+| 数据看板     | `/admin/dashboard`             | ✅   | 全平台视角                           |
+| 商品管理     | `/admin/products`              | ✅   | SUPER_ADMIN 选店铺                   |
+| 卡密管理     | `/admin/stock`                 | ✅   | 跨店铺                               |
+| 订单管理     | `/admin/orders`                | ✅   | 全平台                               |
+| 支付配置     | `/admin/payments`              | ✅   | 通道启停                             |
+| 商户审核     | `/admin/merchant-applications` | ✅   | 通过/拒绝                            |
+| API Key      | `/admin/api-keys`              | ✅   | 查看所有                             |
+| 自定义域名   | `/admin/domain`                | ✅   | 代理配置                             |
+| 行为风控     | `/admin/risk`                  | ✅   | IP/邮箱黑名单 + 熔断                 |
+| 高级统计     | `/admin/stats`                 | ✅   | 时段/漏斗/复购/客单价                |
+| 审计日志     | `/admin/audit-logs`            | ✅   | 全操作日志                           |
+| 系统配置     | `/admin/system`                | ✅   | KV 配置                              |
+| 提现审核     | `/admin/withdrawals`           | ✅   | 通过/拒绝/标记已打款                 |
+| **退款管理** | **`/admin/refunds`**           | ✅   | **T6 - 通过/拒绝/标记打款/记录失败** |
 
 ---
 
@@ -107,10 +109,12 @@ apps/api/src/modules/
 ├── health/              # /health 健康检查
 ├── merchant-application/# 入驻申请 + 邮箱验证码
 ├── merchant-profile/    # 商户 Profile/主题色/代登录/Dashboard 统计
+├── notification/        # 站内信
 ├── open-api/            # 开放 API（API Key + 商户业务接口）
 ├── order/               # 订单 CRUD + 统计 + 事件发布
 ├── payment/             # 支付适配器（epay/mock/usdt）
 ├── product/             # 商品 CRUD（SUPER_ADMIN 已放宽 merchantId 限制）
+├── refund/              # 退款（V4 - 状态机 + 7 天超时 cron + OrderRefundedEvent）
 ├── risk/                # 风控（@Global，黑名单 + 熔断）
 ├── shop/                # 店铺 + 自定义域名
 ├── stats/               # 高级统计
@@ -120,30 +124,36 @@ apps/api/src/modules/
 
 ### 3.1 关键 API 端点
 
-| 模块        | 端点                                  | 方法                | 角色        | 说明                         |
-| ----------- | ------------------------------------- | ------------------- | ----------- | ---------------------------- |
-| Auth        | `/api/auth/login`                     | POST                | 公开        | 登录，返回 `defaultRedirect` |
-| Auth        | `/api/auth/refresh`                   | POST                | 公开        | 刷新 Token                   |
-| Auth        | `/api/auth/me`                        | POST                | 任意        | 当前用户信息                 |
-| Auth        | `/api/auth/captcha`                   | GET                 | 公开        | 图形验证码                   |
-| Auth        | `/api/auth/forgot-password/send-code` | POST                | 公开        | 发邮件验证码                 |
-| Auth        | `/api/auth/forgot-password/reset`     | POST                | 公开        | 重置密码                     |
-| Merchant    | `/api/merchant/apply`                 | POST                | 公开        | 商户入驻申请                 |
-| Merchant    | `/api/merchant/apply/send-code`       | POST                | 公开        | 发验证码                     |
-| Merchant    | `/api/merchant/profile`               | GET/PUT             | MERCHANT    | 资料/主题色/改密             |
-| Merchant    | `/api/merchant/dashboard/stats`       | GET                 | MERCHANT    | 数据看板                     |
-| Withdrawal  | `/api/withdrawal/merchant/balance`    | GET                 | MERCHANT    | 余额                         |
-| Withdrawal  | `/api/withdrawal/merchant/apply`      | POST                | MERCHANT    | 申请提现                     |
-| Withdrawal  | `/api/withdrawal/admin/list`          | GET                 | SUPER_ADMIN | 平台列表                     |
-| Withdrawal  | `/api/withdrawal/admin/:id/approve`   | POST                | SUPER_ADMIN | 审核通过                     |
-| Withdrawal  | `/api/withdrawal/admin/:id/reject`    | POST                | SUPER_ADMIN | 拒绝                         |
-| Withdrawal  | `/api/withdrawal/admin/:id/paid`      | POST                | SUPER_ADMIN | 标记已打款                   |
-| Open API    | `/api/open/v1/products`               | GET/POST            | API Key     | 商品 CRUD                    |
-| Open API    | `/api/open/v1/stock/import`           | POST                | API Key     | 批量导入                     |
-| Open API    | `/api/open/v1/orders`                 | GET                 | API Key     | 订单列表                     |
-| Domain      | `/api/admin/shops/:id/domain`         | GET/PUT/POST/DELETE | MERCHANT    | 自定义域名                   |
-| Impersonate | `/api/admin/merchants/impersonate`    | POST                | SUPER_ADMIN | 生成代登录 token             |
-| Impersonate | `/api/auth/impersonate/consume`       | POST                | 公开        | 消费代登录 token             |
+| 模块        | 端点                                  | 方法                | 角色        | 说明                                   |
+| ----------- | ------------------------------------- | ------------------- | ----------- | -------------------------------------- |
+| Auth        | `/api/auth/login`                     | POST                | 公开        | 登录，返回 `defaultRedirect`           |
+| Auth        | `/api/auth/refresh`                   | POST                | 公开        | 刷新 Token                             |
+| Auth        | `/api/auth/me`                        | POST                | 任意        | 当前用户信息                           |
+| Auth        | `/api/auth/captcha`                   | GET                 | 公开        | 图形验证码                             |
+| Auth        | `/api/auth/forgot-password/send-code` | POST                | 公开        | 发邮件验证码                           |
+| Auth        | `/api/auth/forgot-password/reset`     | POST                | 公开        | 重置密码                               |
+| Merchant    | `/api/merchant/apply`                 | POST                | 公开        | 商户入驻申请                           |
+| Merchant    | `/api/merchant/apply/send-code`       | POST                | 公开        | 发验证码                               |
+| Merchant    | `/api/merchant/profile`               | GET/PUT             | MERCHANT    | 资料/主题色/改密                       |
+| Merchant    | `/api/merchant/dashboard/stats`       | GET                 | MERCHANT    | 数据看板                               |
+| Withdrawal  | `/api/withdrawal/merchant/balance`    | GET                 | MERCHANT    | 余额                                   |
+| Withdrawal  | `/api/withdrawal/merchant/apply`      | POST                | MERCHANT    | 申请提现                               |
+| Withdrawal  | `/api/withdrawal/admin/list`          | GET                 | SUPER_ADMIN | 平台列表                               |
+| Withdrawal  | `/api/withdrawal/admin/:id/approve`   | POST                | SUPER_ADMIN | 审核通过                               |
+| Withdrawal  | `/api/withdrawal/admin/:id/reject`    | POST                | SUPER_ADMIN | 拒绝                                   |
+| Withdrawal  | `/api/withdrawal/admin/:id/paid`      | POST                | SUPER_ADMIN | 标记已打款                             |
+| Open API    | `/api/open/v1/products`               | GET/POST            | API Key     | 商品 CRUD                              |
+| Open API    | `/api/open/v1/stock/import`           | POST                | API Key     | 批量导入                               |
+| Open API    | `/api/open/v1/orders`                 | GET                 | API Key     | 订单列表                               |
+| Domain      | `/api/admin/shops/:id/domain`         | GET/PUT/POST/DELETE | MERCHANT    | 自定义域名                             |
+| Impersonate | `/api/admin/merchants/impersonate`    | POST                | SUPER_ADMIN | 生成代登录 token                       |
+| Impersonate | `/api/auth/impersonate/consume`       | POST                | 公开        | 消费代登录 token                       |
+| **Refund**  | `/api/refunds/apply`                  | POST                | 公开        | **V4 买家申请退款**                    |
+| **Refund**  | `/api/admin/refunds`                  | GET/POST            | SUPER_ADMIN | **V4 平台代发/列表**                   |
+| **Refund**  | `/api/admin/refunds/:id/approve`      | POST                | SUPER_ADMIN | **V4 审核通过**                        |
+| **Refund**  | `/api/admin/refunds/:id/reject`       | POST                | SUPER_ADMIN | **V4 拒绝**                            |
+| **Refund**  | `/api/admin/refunds/:id/mark-paid`    | POST                | SUPER_ADMIN | **V4 标记打款 (manualPayout/tradeNo)** |
+| **Refund**  | `/api/admin/refunds/:id/mark-failed`  | POST                | SUPER_ADMIN | **V4 通道退款失败**                    |
 
 **完整 Swagger 文档**：https://winmelon.cn/api/docs
 
@@ -158,7 +168,7 @@ apps/web/src/
 │   ├── ForgotPassword.vue          # 忘记密码
 │   ├── shop/                       # 买家侧
 │   │   ├── ShopIndex.vue
-│   │   ├── OrderQuery.vue
+│   │   ├── OrderQuery.vue          # V4 申请退款按钮 + 弹窗
 │   │   ├── MockPay.vue
 │   │   ├── UsdtPay.vue
 │   │   └── MerchantApply.vue
@@ -177,7 +187,8 @@ apps/web/src/
 │   │   ├── AdvancedStats.vue
 │   │   ├── RiskControl.vue
 │   │   ├── ApiKeys.vue
-│   │   └── Withdrawals.vue         # 提现审核
+│   │   ├── Withdrawals.vue         # 提现审核
+│   │   └── Refunds.vue             # V4 退款管理
 │   └── merchant/                    # 商户工作台
 │       ├── MerchantLayout.vue       # 改版：深色侧栏 + 白色顶栏
 │       ├── MerchantDashboard.vue
@@ -213,6 +224,8 @@ MerchantApplication  # 商户入驻申请
 EmailVerification    # 验证码（6位，type=reset_password/merchant_apply）
 ApiKey         # 开放 API Key
 Withdrawal      # 提现申请（P0 新增）
+Refund          # V4 退款申请（5 状态机 + merchantId 反范式 + 通道字段）
+CommissionRecord# 邀请返佣记录（V4 加 reversedAt 字段，支持冲正）
 ```
 
 ---
@@ -235,7 +248,19 @@ Withdrawal      # 提现申请（P0 新增）
 
 ## 7. 待办 Roadmap（按优先级）
 
-### 7.1 P0（核心运营功能，进行中）
+### 7.1 V4 退款（阶段 1 已完成，阶段 2 待实施）
+
+| ID   | 任务                       | 状态    | 备注                                                       |
+| ---- | -------------------------- | ------- | ---------------------------------------------------------- |
+| V4-1 | Refund 数据模型 + 迁移 SQL | ✅ 完成 | T1 - 5 状态机 + merchantId 反范式                          |
+| V4-2 | 退款状态机 + 7 天超时 cron | ✅ 完成 | T2 - markPaid 事务 + PENDING 超时自动 REJECTED             |
+| V4-3 | 阶段 1 退款逻辑            | ✅ 完成 | T4 - 余额扣减 + 卡密重置 + 事件发出                        |
+| V4-4 | 返佣冲正                   | ✅ 完成 | T5 - OrderRefundedEvent 监听 + CommissionRecord.reversedAt |
+| V4-5 | 退款前端（买家 + 平台）    | ✅ 完成 | T6 - OrderQuery.vue 申请按钮 + Refunds.vue 列表            |
+| V4-6 | 阶段 2 实际退钱通道        | ⏳ 待办 | **T3** - 易支付/微信/支付宝 adapter + USDT 手动打款        |
+| V4-7 | 财务对账页                 | ⏳ 待办 | `/admin/finance/daily-report`                              |
+
+### 7.2 P0（核心运营功能）
 
 | ID   | 任务             | 状态    | 备注                                            |
 | ---- | ---------------- | ------- | ----------------------------------------------- |
@@ -276,9 +301,9 @@ Withdrawal      # 提现申请（P0 新增）
 
 ### 8.2 已知小问题（未处理）
 
-- **TypeScript 类型检查在前端有遗留错误**（Stock.vue、UsdtPay.vue 等），但 `vite build` 跳过类型检查可正常打包
 - **main.js 旧版覆盖问题**：每次全量 build 都会出现，需要 build 后手动 cp 覆盖。可考虑在 Dockerfile 加 `chmod -R` 或专门的 post-build 步骤
 - **前端 .vue.js 编译产物**已清理，但需要在每次新功能前检查是否有遗漏的 `.js` 编译产物
+- **退款阶段 2 实际退钱通道（T3）尚未实施**：当前 `mark-paid manualPayout=true` 仅记录状态，实际退款金额需 SUPER_ADMIN 线下打款
 
 ---
 

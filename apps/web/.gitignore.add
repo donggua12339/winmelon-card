@@ -1,0 +1,6 @@
+# Vite/typescript auto-generated artifacts (vue-tsc)
+src/**/*.vue.js
+src/**/*.d.ts
+src/**/*.js
+!src/main.ts
+!src/router/index.ts
