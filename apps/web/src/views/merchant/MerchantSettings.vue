@@ -108,12 +108,17 @@ onMounted(fetchProfile);
 </script>
 
 <template>
-  <div v-loading="!profile" class="merchant-settings">
-    <p class="page-subtitle">基本资料、主题色、修改密码</p>
+  <div v-loading="!profile" class="admin-page">
+    <header class="page-header">
+      <div>
+        <h2 class="page-title">商户设置</h2>
+        <p class="page-desc">基本资料、主题色、修改密码</p>
+      </div>
+    </header>
 
     <!-- 基本信息 -->
-    <el-card v-if="profile" class="section">
-      <template #header>基本信息</template>
+    <section v-if="profile" class="panel">
+      <h3 class="panel-title">基本信息</h3>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="商户名称">{{ profile.name }}</el-descriptions-item>
         <el-descriptions-item label="商户编码">{{ profile.code }}</el-descriptions-item>
@@ -128,11 +133,11 @@ onMounted(fetchProfile);
           {{ new Date(profile.createdAt).toLocaleString() }}
         </el-descriptions-item>
       </el-descriptions>
-    </el-card>
+    </section>
 
     <!-- 主题色 -->
-    <el-card class="section">
-      <template #header>工作台主题色</template>
+    <section class="panel">
+      <h3 class="panel-title">工作台主题色</h3>
       <el-form ref="themeRef" :model="themeForm" :rules="themeRules" label-position="top">
         <el-form-item label="主题色">
           <el-color-picker v-model="themeForm.color" :predefine="presetColors" :show-alpha="false" />
@@ -155,11 +160,11 @@ onMounted(fetchProfile);
           <el-button type="primary" :loading="savingTheme" @click="saveTheme">保存主题色</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </section>
 
     <!-- 修改密码 -->
-    <el-card class="section">
-      <template #header>修改密码</template>
+    <section class="panel">
+      <h3 class="panel-title">修改密码</h3>
       <el-form ref="pwRef" :model="pwForm" :rules="pwRules" label-width="120px">
         <el-form-item label="原密码" prop="oldPassword">
           <el-input v-model="pwForm.oldPassword" type="password" show-password />
@@ -174,69 +179,84 @@ onMounted(fetchProfile);
           <el-button type="primary" :loading="changingPw" @click="changePassword"> 修改密码 </el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.merchant-settings {
+.admin-page {
   max-width: 800px;
   margin: 0 auto;
 }
 
-.page-subtitle {
-  margin: 0 0 20px;
-  color: #64748b;
+.page-header {
+  margin-bottom: var(--wm-space-xl);
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--wm-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.page-desc {
+  color: var(--wm-text-secondary);
   font-size: 13px;
+  margin: 0;
 }
 
-.section {
-  margin-bottom: 16px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+.panel {
+  background: var(--wm-bg-card);
+  border: 1px solid var(--wm-border-default);
+  border-radius: var(--wm-radius-lg);
+  padding: var(--wm-space-xl);
+  margin-bottom: var(--wm-space-lg);
+  box-shadow: var(--wm-shadow-sm);
 }
 
-.section :deep(.el-card__header) {
-  padding: 14px 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
+.panel-title {
+  font-size: 15px;
   font-weight: 600;
-}
-
-.section :deep(.el-card__body) {
-  padding: 20px;
+  color: var(--wm-text-primary);
+  margin: 0 0 var(--wm-space-md);
+  letter-spacing: -0.005em;
 }
 
 .theme-preview {
   display: inline-block;
   width: 32px;
   height: 32px;
-  border-radius: 6px;
-  margin-left: 12px;
+  border-radius: var(--wm-radius-sm);
+  margin-left: var(--wm-space-md);
   vertical-align: middle;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--wm-border-default);
 }
 
 .theme-hex {
   display: inline-block;
-  margin-left: 8px;
-  font-family: monospace;
+  margin-left: var(--wm-space-sm);
+  font-family: var(--wm-font-mono);
   font-size: 13px;
   vertical-align: middle;
+  color: var(--wm-text-secondary);
 }
 
 .preset-row {
   display: flex;
-  gap: 8px;
+  gap: var(--wm-space-sm);
 }
 
 .preset-swatch {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--wm-radius-sm);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .preset-swatch:hover {
@@ -244,7 +264,7 @@ onMounted(fetchProfile);
 }
 
 .preset-swatch.active {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-5);
+  border-color: var(--wm-accent-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wm-accent-primary) 30%, transparent);
 }
 </style>

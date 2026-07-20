@@ -131,7 +131,7 @@ onMounted(fetchStats);
         <div class="kpi-value">{{ stats?.today.uv ?? 0 }}</div>
         <div class="kpi-sub">
           <span class="kpi-dot purple"></span>转化率 {{ stats?.today.conversionRate ?? 0 }}% · 环比
-          <span :style="{ color: uvDelta >= 0 ? '#10b981' : '#ef4444' }">
+          <span :style="{ color: uvDelta >= 0 ? 'var(--wm-accent-success)' : 'var(--wm-accent-danger)' }">
             {{ uvDelta >= 0 ? '+' : '' }}{{ uvDelta }}%
           </span>
         </div>
@@ -404,7 +404,7 @@ onMounted(fetchStats);
 
 /* 欢迎条 */
 .welcome-card {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--wm-accent-primary) 0%, var(--wm-accent-tertiary) 100%);
   border-radius: 12px;
   padding: 20px 24px;
   margin-bottom: 20px;
@@ -474,16 +474,16 @@ onMounted(fetchStats);
 }
 
 .kpi-blue {
-  --kpi-color: #3b82f6;
+  --kpi-color: var(--wm-accent-secondary);
 }
 .kpi-green {
-  --kpi-color: #10b981;
+  --kpi-color: var(--wm-accent-success);
 }
 .kpi-orange {
-  --kpi-color: #f59e0b;
+  --kpi-color: var(--wm-accent-warning);
 }
 .kpi-purple {
-  --kpi-color: #8b5cf6;
+  --kpi-color: var(--wm-accent-tertiary);
 }
 
 .kpi-label {
@@ -519,16 +519,16 @@ onMounted(fetchStats);
 }
 
 .kpi-dot.blue {
-  background: #3b82f6;
+  background: var(--wm-accent-secondary);
 }
 .kpi-dot.green {
-  background: #10b981;
+  background: var(--wm-accent-success);
 }
 .kpi-dot.orange {
-  background: #f59e0b;
+  background: var(--wm-accent-warning);
 }
 .kpi-dot.purple {
-  background: #8b5cf6;
+  background: var(--wm-accent-tertiary);
 }
 
 /* 卡片 */
@@ -861,7 +861,7 @@ onMounted(fetchStats);
 .arrow-rate {
   font-size: 14px;
   font-weight: 700;
-  color: #6366f1;
+  color: var(--wm-accent-primary);
   margin: 4px 0 2px;
   font-family: monospace;
 }
@@ -877,14 +877,14 @@ onMounted(fetchStats);
   background: rgba(99, 102, 241, 0.06);
   border-radius: 8px;
   font-size: 13px;
-  color: #475569;
+  color: var(--wm-text-secondary);
   text-align: center;
 }
 
 .overall-rate {
   font-size: 18px;
   font-weight: 800;
-  color: #6366f1;
+  color: var(--wm-accent-primary);
   font-family: monospace;
   margin: 0 4px;
 }
@@ -910,7 +910,7 @@ onMounted(fetchStats);
 .block-label {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--wm-text-secondary);
   margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -938,7 +938,7 @@ onMounted(fetchStats);
 .overall-rate-sm {
   font-size: 14px;
   font-weight: 800;
-  color: #6366f1;
+  color: var(--wm-accent-primary);
   font-family: monospace;
   margin-left: 4px;
 }
@@ -1009,7 +1009,7 @@ onMounted(fetchStats);
 }
 
 .product-stats b.highlight {
-  color: #10b981;
+  color: var(--wm-accent-success);
 }
 
 .product-funnel {
@@ -1017,7 +1017,7 @@ onMounted(fetchStats);
 }
 
 .pf-item.uv {
-  color: #6366f1;
+  color: var(--wm-accent-primary);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -1033,13 +1033,13 @@ onMounted(fetchStats);
 
 .pf-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(90deg, var(--wm-accent-primary) 0%, var(--wm-accent-tertiary) 100%);
   border-radius: 3px;
   transition: width 0.6s ease;
 }
 
 .pf-paid {
-  color: #10b981;
+  color: var(--wm-accent-success);
   font-weight: 500;
 }
 
@@ -1093,25 +1093,25 @@ onMounted(fetchStats);
 }
 
 .dn.uv .dn-num {
-  color: #6366f1;
+  color: var(--wm-accent-primary);
 }
 .dn.ord .dn-num {
-  color: #f59e0b;
+  color: var(--wm-accent-warning);
 }
 .dn.paid .dn-num {
-  color: #10b981;
+  color: var(--wm-accent-success);
 }
 
 .dn-arr {
   font-size: 10px;
-  color: #cbd5e1;
+  color: var(--wm-text-tertiary);
   margin-top: -8px;
 }
 
 .daily-rate {
   font-size: 13px;
   font-weight: 800;
-  color: #6366f1;
+  color: var(--wm-accent-primary);
   font-family: monospace;
 }
 

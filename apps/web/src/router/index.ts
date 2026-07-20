@@ -104,6 +104,11 @@ const routes = [
         component: () => import('@/views/admin/AuditLog.vue'),
       },
       {
+        path: 'webhook',
+        name: 'admin-webhook',
+        component: () => import('@/views/admin/WebhookMonitor.vue'),
+      },
+      {
         path: 'stats',
         name: 'admin-stats',
         component: () => import('@/views/admin/AdvancedStats.vue'),

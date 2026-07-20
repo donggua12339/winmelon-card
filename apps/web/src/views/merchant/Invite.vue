@@ -212,22 +212,22 @@ onMounted(fetchAll);
 }
 .stat-card {
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wm-border-default);
   border-radius: 8px;
   padding: 16px;
 }
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--wm-text-secondary);
   margin-bottom: 8px;
 }
 .stat-value {
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--wm-text-primary);
 }
 .stat-value.primary {
-  color: #10b981;
+  color: var(--wm-accent-success);
 }
 .section-card {
   margin-bottom: 16px;
@@ -241,7 +241,7 @@ onMounted(fetchAll);
   font-family: monospace;
   font-size: 14px;
   font-weight: 700;
-  color: #7c3aed;
+  color: var(--wm-accent-primary);
   background: #f3e8ff;
   padding: 2px 8px;
   border-radius: 4px;

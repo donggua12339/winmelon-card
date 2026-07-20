@@ -210,8 +210,8 @@ onMounted(fetchList);
 }
 .detail-meta {
   font-size: 13px;
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--wm-text-secondary);
+  background: var(--wm-bg-hover);
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -226,7 +226,7 @@ onMounted(fetchList);
 .message-item {
   padding: 10px 12px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: var(--wm-border-default);
 }
 .msg-merchant {
   background: #dcfce7;
@@ -235,27 +235,27 @@ onMounted(fetchList);
   background: #fef3c7;
 }
 .msg-internal {
-  border: 1px dashed #f59e0b;
+  border: 1px dashed var(--wm-accent-warning);
 }
 .msg-sender {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--wm-text-secondary);
   margin-bottom: 4px;
 }
 .msg-content {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--wm-text-primary);
   white-space: pre-wrap;
   word-break: break-word;
 }
 .msg-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--wm-text-tertiary);
   margin-top: 4px;
 }
 .reply-area {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--wm-border-default);
   padding-top: 12px;
 }
 </style>

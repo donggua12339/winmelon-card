@@ -381,12 +381,12 @@ onMounted(() => {
 
 .meta-tag.limit {
   background: rgba(251, 191, 36, 0.12);
-  color: #fbbf24;
+  color: var(--wm-accent-warning);
 }
 
 .meta-tag.stock {
   background: rgba(52, 211, 153, 0.12);
-  color: #34d399;
+  color: var(--wm-accent-success);
 }
 
 .product-footer {

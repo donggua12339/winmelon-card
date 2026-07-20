@@ -315,23 +315,23 @@ onMounted(async () => {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid var(--balance-color, #cbd5e1);
+  border: 1px solid var(--wm-border-default);
+  border-left: 4px solid var(--balance-color, var(--wm-text-tertiary));
 }
 
 .balance-available {
-  --balance-color: #10b981;
+  --balance-color: var(--wm-accent-success);
 }
 .balance-frozen {
-  --balance-color: #f59e0b;
+  --balance-color: var(--wm-accent-warning);
 }
 .balance-withdrawn {
-  --balance-color: #6366f1;
+  --balance-color: var(--wm-accent-primary);
 }
 
 .card-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--wm-text-secondary);
   font-weight: 500;
   margin-bottom: 8px;
 }
@@ -339,14 +339,14 @@ onMounted(async () => {
 .card-value {
   font-size: 26px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--wm-text-primary);
   font-family: 'SF Mono', Monaco, monospace;
   letter-spacing: -0.02em;
 }
 
 .card-sub {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--wm-text-tertiary);
   margin-top: 4px;
 }
 
@@ -376,7 +376,7 @@ onMounted(async () => {
 
 .form-tip {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--wm-text-tertiary);
   margin-top: 4px;
 }
 

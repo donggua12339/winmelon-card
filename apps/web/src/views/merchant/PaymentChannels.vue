@@ -82,7 +82,7 @@ onMounted(fetchList);
 .page-header .tip {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--wm-text-secondary);
 }
 .channel-list {
   display: flex;
@@ -94,7 +94,7 @@ onMounted(fetchList);
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wm-border-default);
   border-radius: 8px;
 }
 .channel-info {
@@ -108,8 +108,8 @@ onMounted(fetchList);
 }
 .channel-code {
   font-size: 12px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--wm-text-secondary);
+  background: var(--wm-border-default);
   padding: 2px 6px;
   border-radius: 4px;
 }

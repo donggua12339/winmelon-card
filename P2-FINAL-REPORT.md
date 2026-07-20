@@ -273,6 +273,8 @@ CREATE INDEX idx_merchant_app_activation_token ON merchant_applications(activati
 
 ### 6. 技术升级：GraphQL API
 
+> **状态**：已放弃（2026-07）。曾实现后因维护成本高于收益，模块已整体删除，nginx `/graphql` 反代已移除。详见 T7-REFUND-DELIVERY-REPORT.md。
+
 **问题**：REST 端点 85+ 个，前端每个页面都要拼 URL。
 **方案**：
 
