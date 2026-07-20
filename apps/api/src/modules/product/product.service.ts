@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { CacheService } from '../../infrastructure/cache/cache.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
@@ -11,6 +12,7 @@ export class ProductService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly cache: CacheService,
   ) {}
 
   async create(merchantId: string, shopId: string, dto: CreateProductDto, ctx: AuditCtx) {
@@ -29,6 +31,7 @@ export class ProductService {
         purchaseLimit: dto.purchaseLimit,
         isAutoDelivery: dto.isAutoDelivery ?? true,
         sort: dto.sort ?? 0,
+        seekallTier: dto.seekallTier ?? null,
         status: 'OFFLINE', // 默认下架，需手动上架
       },
     });
@@ -50,6 +53,7 @@ export class ProductService {
 
   async update(merchantId: string, id: string, dto: UpdateProductDto, ctx: AuditCtx) {
     const before = await this.assertProductOwned(merchantId, id);
+    const beforeShopId = before.shopId;
 
     const data: Prisma.ProductUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
@@ -60,6 +64,7 @@ export class ProductService {
     if (dto.purchaseLimit !== undefined) data.purchaseLimit = dto.purchaseLimit;
     if (dto.isAutoDelivery !== undefined) data.isAutoDelivery = dto.isAutoDelivery;
     if (dto.sort !== undefined) data.sort = dto.sort;
+    if (dto.seekallTier !== undefined) data.seekallTier = dto.seekallTier;
 
     const after = await this.prisma.product.update({ where: { id }, data });
 
@@ -75,6 +80,10 @@ export class ProductService {
       userAgent: ctx.userAgent,
       requestId: ctx.requestId,
     });
+
+    // M1 写穿透：商品变更后失效缓存
+    await this.cache.invalidate(`cache:product:${id}`);
+    await this.cache.invalidateByPrefix(`cache:products:shop:${beforeShopId}:`);
 
     return this.serialize(after);
   }
@@ -110,6 +119,9 @@ export class ProductService {
       requestId: ctx.requestId,
     });
 
+    // M1 写穿透：上下架影响列表缓存
+    await this.cache.invalidateByPrefix(`cache:products:shop:${before.shopId}:`);
+
     return this.serialize(after);
   }
 
@@ -143,6 +155,10 @@ export class ProductService {
       userAgent: ctx.userAgent,
       requestId: ctx.requestId,
     });
+
+    // M1 写穿透：删除商品后失效缓存
+    await this.cache.invalidate(`cache:product:${id}`);
+    await this.cache.invalidateByPrefix(`cache:products:shop:${before.shopId}:`);
   }
 
   async list(merchantId: string | undefined, query: ProductQueryDto) {
@@ -246,6 +262,7 @@ export class ProductService {
     purchaseLimit: number | null;
     isAutoDelivery: boolean;
     sort: number;
+    seekallTier: 'TRIAL' | 'MONTHLY' | 'LIFETIME' | null;
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
@@ -263,6 +280,7 @@ export class ProductService {
       purchaseLimit: p.purchaseLimit,
       isAutoDelivery: p.isAutoDelivery,
       sort: p.sort,
+      seekallTier: p.seekallTier,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
       deletedAt: p.deletedAt,

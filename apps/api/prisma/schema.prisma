@@ -179,6 +179,8 @@ model Product {
   purchaseLimit Int?   // 单次限购数量
   isAutoDelivery Boolean @default(true)
   sort        Int      @default(0)
+  // SeekAll webhook: 标记此商品为 SeekAll 会员卡商品,非 SeekAll 商品留空
+  seekallTier SeekallTier?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -196,6 +198,12 @@ enum ProductStatus {
   ONLINE
   OFFLINE
   SOLD_OUT
+}
+
+enum SeekallTier {
+  TRIAL
+  MONTHLY
+  LIFETIME
 }
 
 model StockCard {
@@ -258,6 +266,7 @@ model Order {
   stockCards     StockCard[]
   payments       Payment[]
   tickets        Ticket[]
+  refunds        Refund[]
 
   @@index([shopId])
   @@index([status])
@@ -353,6 +362,25 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 
   @@map("system_configs")
+}
+
+// ============================================================
+// P2-8: 账号激活 token（一次性，48h 过期）
+// ============================================================
+model ActivationToken {
+  id         String   @id @default(uuid())
+  token      String   @unique @db.VarChar(64)  // 32 字节随机，hash 后存
+  email      String   @db.VarChar(255)
+  userId     String?  @db.VarChar(36)         // 激活成功后关联到 User
+  // 类型：MERCHANT_APPROVE / FORGOT_PASSWORD（预留扩展）
+  type       String   @default("MERCHANT_APPROVE") @db.VarChar(32)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("activation_tokens")
 }
 
 // ============================================================
@@ -521,6 +549,95 @@ model Withdrawal {
 }
 
 // ============================================================
+// 退款（P1-3 + P1-4）
+// 阶段 1：商户余额扣减 + 卡密重置（不调支付通道）
+// 阶段 2：调支付通道原路退款（USDT 走线下 manualPayout）
+// ============================================================
+
+enum RefundStatus {
+  PENDING    // 待审核（买家申请或平台发起）
+  APPROVED   // 已审核通过，待打款
+  REJECTED   // 已拒绝
+  PAID       // 已打款给买家
+  FAILED     // 通道退款失败（3 次重试后转人工）
+}
+
+enum RefundInitiator {
+  BUYER      // 买家申请
+  PLATFORM   // 平台手动发起
+}
+
+model Refund {
+  id            String   @id @default(uuid())
+  refundNo      String   @unique @db.VarChar(32)  // 雪花 ID，对外暴露
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  // 冗余字段：便于按商户查询退款列表（避免 join）
+  merchantId    String?  @db.VarChar(36)
+  amount        Decimal  @db.Decimal(12,2)  // 退款金额（=订单 totalAmount 或部分退款）
+  reason        String   @db.Text  // 退款原因
+  status        RefundStatus @default(PENDING)
+  initiator     RefundInitiator  // 发起方
+  // 审核信息
+  processedById String?  @db.VarChar(36)  // 审核人（SUPER_ADMIN）
+  processedAt   DateTime?
+  rejectedAt    DateTime?
+  rejectReason  String?  @db.Text
+  // 打款信息（阶段 2）
+  paidAt        DateTime?
+  tradeNo       String?  @db.VarChar(128)  // 通道退款流水号
+  retryCount    Int      @default(0)
+  lastError     String?  @db.Text  // 通道退款失败原因
+  lastErrorAt   DateTime?  // 上次失败时间
+  nextRetryAt   DateTime?  // 下次重试时间（1m/5m/30m 退避）
+  alertSentAt   DateTime?  // 严重告警发送时间（1h 去重）
+  manualPayout  Boolean  @default(false)  // true = 线下手动打款（USDT 等）
+  // USDT 手动打款链上信息
+  usdtTxHash        String?  @db.VarChar(128)
+  usdtSenderWallet  String?  @db.VarChar(128)
+  usdtReceiverWallet String? @db.VarChar(128)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([merchantId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, nextRetryAt])
+  @@map("refunds")
+}
+
+// ============================================================
+// V4-7 财务对账差异日志
+// ============================================================
+model FinanceReconciliationLog {
+  id              String   @id @default(uuid())
+  // 快照日期（按小时精度）
+  snapshotAt      DateTime
+  // 差异类型：INCOME_MISMATCH / REFUND_MISMATCH / BALANCE_MISMATCH
+  type            String   @db.VarChar(32)
+  // 描述（如 "总收入 ¥1234 vs 商户余额之和 ¥1230，差 ¥4"）
+  description     String   @db.Text
+  // 差异金额（绝对值）
+  diffAmount      Decimal  @db.Decimal(18,4)
+  // 严重等级：WARNING / ERROR / CRITICAL
+  severity        String   @default("WARNING") @db.VarChar(16)
+  // 告警发送状态
+  notifiedAt      DateTime?
+  // 解决状态
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?  @db.VarChar(36)
+  resolutionNote  String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([snapshotAt])
+  @@index([resolved, severity])
+  @@map("finance_reconciliation_logs")
+}
+
+// ============================================================
 // P0-3 生意罗盘：页面访问记录（UV/转化率）
 // ============================================================
 
@@ -632,6 +749,8 @@ model CommissionRecord {
   // 返佣金额 = baseAmount * rate
   amount            Decimal  @db.Decimal(12,2)
   status            CommissionStatus @default(SETTLED)
+  // 冲正时间（订单退款时，按比例冲正已结算的返佣）
+  reversedAt        DateTime?
   createdAt         DateTime @default(now())
 
   @@index([inviterMerchantId, createdAt])

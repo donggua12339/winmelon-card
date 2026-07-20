@@ -5,6 +5,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { CacheModule } from './infrastructure/cache/cache.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { CryptoModule } from './infrastructure/crypto/crypto.module';
 import { IdModule } from './infrastructure/id/id.module';
 import { MailModule } from './infrastructure/mail/mail.module';
@@ -29,6 +31,10 @@ import { MerchantPaymentChannelModule } from './modules/merchant-payment-channel
 import { InviteModule } from './modules/invite/invite.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { RefundModule } from './modules/refund/refund.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { CacheAdminModule } from './modules/cache-admin/cache-admin.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor';
 
@@ -43,6 +49,8 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     EventEmitterModule.forRoot(),
     PrismaModule,
     RedisModule,
+    CacheModule,
+    SystemConfigModule,
     CryptoModule,
     IdModule,
     MailModule,
@@ -66,6 +74,10 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     InviteModule,
     TicketModule,
     NotificationModule,
+    RefundModule,
+    FinanceModule,
+    CacheAdminModule,
+    WebhookModule,
     HealthModule,
   ],
   providers: [

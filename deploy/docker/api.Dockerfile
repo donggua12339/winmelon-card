@@ -92,10 +92,14 @@ COPY --from=builder /app/package.json /app/package-lock.json* ./
 # 设置权限
 RUN chown -R nodejs:nodejs /app
 
+# 健康检查脚本：从环境变量 PORT 读取端口，默认 3000
+COPY deploy/docker/healthcheck.sh /healthcheck.sh
+RUN chmod +x /healthcheck.sh && chown nodejs:nodejs /healthcheck.sh
+
 USER nodejs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1
+    CMD /healthcheck.sh || exit 1
 
 CMD ["node", "apps/api/dist/main.js"]

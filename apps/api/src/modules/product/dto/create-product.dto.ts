@@ -1,4 +1,15 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, IsInt, Min, Max, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  Min,
+  Max,
+  MaxLength,
+  MinLength,
+  IsEnum,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateProductDto {
@@ -52,4 +63,9 @@ export class CreateProductDto {
   @Min(0)
   @Max(99999)
   sort?: number = 0;
+
+  // SeekAll webhook: 标记此商品为 SeekAll 会员卡商品,非 SeekAll 商品留空
+  @IsOptional()
+  @IsEnum(['TRIAL', 'MONTHLY', 'LIFETIME'])
+  seekallTier?: 'TRIAL' | 'MONTHLY' | 'LIFETIME';
 }

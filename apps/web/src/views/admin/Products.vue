@@ -19,6 +19,7 @@ interface Product {
   purchaseLimit?: number | null;
   isAutoDelivery: boolean;
   sort: number;
+  seekallTier?: 'TRIAL' | 'MONTHLY' | 'LIFETIME' | null;
   createdAt: string;
   stock: ProductStock;
 }
@@ -64,6 +65,7 @@ const form = reactive({
   purchaseLimit: undefined as number | undefined,
   isAutoDelivery: true,
   sort: 0,
+  seekallTier: '' as '' | 'TRIAL' | 'MONTHLY' | 'LIFETIME',
 });
 
 const rules: FormRules<typeof form> = {
@@ -119,6 +121,7 @@ function openCreate(): void {
     purchaseLimit: undefined,
     isAutoDelivery: true,
     sort: 0,
+    seekallTier: '',
   });
   dialogVisible.value = true;
 }
@@ -134,6 +137,7 @@ function openEdit(row: Product): void {
     purchaseLimit: row.purchaseLimit ?? undefined,
     isAutoDelivery: row.isAutoDelivery,
     sort: row.sort,
+    seekallTier: row.seekallTier ?? '',
   });
   dialogVisible.value = true;
 }
@@ -153,6 +157,7 @@ async function onSubmit(): Promise<void> {
       purchaseLimit: form.purchaseLimit,
       isAutoDelivery: form.isAutoDelivery,
       sort: form.sort,
+      seekallTier: form.seekallTier || undefined,
     };
     if (dialogMode.value === 'create') {
       if (!form.shopId) {
@@ -239,6 +244,12 @@ onMounted(() => {
           <el-tag :type="statusTag(row.status).type">{{ statusTag(row.status).text }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="SeekAll" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.seekallTier" type="success" size="small">{{ row.seekallTier }}</el-tag>
+          <span v-else style="color: #94a3b8">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="sort" label="排序" width="80" />
       <el-table-column prop="createdAt" label="创建时间" width="170">
         <template #default="{ row }">{{ new Date(row.createdAt).toLocaleString() }}</template>
@@ -299,6 +310,13 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="自动发货">
           <el-switch v-model="form.isAutoDelivery" />
+        </el-form-item>
+        <el-form-item label="SeekAll 档位">
+          <el-select v-model="form.seekallTier" placeholder="非 SeekAll 商品留空" clearable style="width: 100%">
+            <el-option label="试用 (TRIAL)" value="TRIAL" />
+            <el-option label="月度 (MONTHLY)" value="MONTHLY" />
+            <el-option label="终身 (LIFETIME)" value="LIFETIME" />
+          </el-select>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" :max="99999" />
