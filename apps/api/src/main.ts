@@ -32,8 +32,9 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('PORT', 3000);
   const prefix = config.get<string>('API_PREFIX', 'api');
   const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:5173');
-  // P2-2: 生产环境默认关闭 Swagger，避免 API 结构泄露
-  const enableSwagger = config.get<string>('ENABLE_SWAGGER', 'false') !== 'false';
+  // P2-2: 生产环境默认开启 Swagger，但只导出 OpenAPI（公开 API）部分
+  // 避免泄露 admin/auth/shop 等内部接口结构；可用 ENABLE_SWAGGER=false 关闭
+  const enableSwagger = config.get<string>('ENABLE_SWAGGER', 'true') !== 'false';
 
   app.setGlobalPrefix(prefix);
 
@@ -156,6 +157,15 @@ async function bootstrap(): Promise<void> {
       .setDescription('WM 官方虚拟卡密交易平台 - API 文档')
       .setVersion('1.0.0')
       .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' }, 'JWT')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'sk_live_ 开头的商户 API Key（也可直接用 X-API-Key 头）',
+        },
+        'ApiKey',
+      )
+      .addTag('open-api', '对外开放 API（X-API-Key 鉴权）')
       .addTag('auth', '鉴权')
       .addTag('shop', '买家侧 - 店铺/商品')
       .addTag('order', '买家侧 - 订单')
@@ -169,7 +179,16 @@ async function bootstrap(): Promise<void> {
       .addTag('admin-stats', '后台 - 统计')
       .addTag('admin-risk', '后台 - 风控')
       .build();
+    // 生产安全：扫描全部后过滤，只保留 /open/v1/* 公开 API 路径
+    // 避免 admin/auth/shop 等内部接口结构泄露
     const document = SwaggerModule.createDocument(app, swaggerConfig);
+    const filteredPaths: typeof document.paths = {};
+    for (const [path, item] of Object.entries(document.paths)) {
+      if (path.includes('/open/v1')) {
+        filteredPaths[path] = item;
+      }
+    }
+    document.paths = filteredPaths;
     SwaggerModule.setup(`${prefix}/docs`, app, document, {
       swaggerOptions: {
         persistAuthorization: true,
