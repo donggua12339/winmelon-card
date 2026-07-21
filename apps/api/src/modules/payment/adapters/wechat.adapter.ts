@@ -31,6 +31,8 @@ export interface WechatConfig {
   apiV3Key: string;
   serialNo: string;
   privateKey: string;
+  /** 微信支付公钥 PEM（2024 新版公钥模式，有此字段时回调验签直接用公钥，不走 /v3/certificates） */
+  platformPublicKey?: string;
 }
 
 interface CertEntry {
@@ -52,6 +54,7 @@ export class WechatAdapter implements PaymentAdapter {
   async createPayment(params: CreatePaymentParams, config: Record<string, unknown>): Promise<CreatePaymentResult> {
     const cfg = config as unknown as WechatConfig;
     this.assertConfig(cfg);
+    this.assertAppId(cfg);
 
     const totalFen = this.yuanToFen(params.amount);
     const bodyObj = {
@@ -98,15 +101,21 @@ export class WechatAdapter implements PaymentAdapter {
       throw new Error('微信回调缺少签名头');
     }
 
-    const platformCert = this.getCert(serial);
-    if (!platformCert) {
-      // 缓存无该平台证书：同步刷新一次（微信证书轮换场景）
-      throw new Error(`平台证书未缓存 serial=${serial}，需刷新`);
+    // 验签公钥选择：公钥模式（2024 新版）直接用 platformPublicKey，否则查平台证书缓存
+    let verifyKey: string;
+    if (cfg.platformPublicKey) {
+      verifyKey = cfg.platformPublicKey;
+    } else {
+      const platformCert = this.getCert(serial);
+      if (!platformCert) {
+        throw new Error(`平台证书未缓存 serial=${serial}，需刷新`);
+      }
+      verifyKey = platformCert.pem;
     }
 
     // 验签：message = timestamp\nnonce\nbody\n
     const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
-    const ok = createVerify('RSA-SHA256').update(message, 'utf8').verify(platformCert.pem, signature, 'base64');
+    const ok = createVerify('RSA-SHA256').update(message, 'utf8').verify(verifyKey, signature, 'base64');
     if (!ok) {
       this.logger.warn(`微信回调理签失败 serial=${serial}`);
       throw new Error('微信回调理签失败');
@@ -298,8 +307,14 @@ export class WechatAdapter implements PaymentAdapter {
   }
 
   private assertConfig(cfg: WechatConfig): void {
-    if (!cfg.appId || !cfg.mchId || !cfg.apiV3Key || !cfg.serialNo || !cfg.privateKey) {
-      throw new Error('微信支付配置不完整（appId/mchId/apiV3Key/serialNo/privateKey）');
+    if (!cfg.mchId || !cfg.apiV3Key || !cfg.serialNo || !cfg.privateKey) {
+      throw new Error('微信支付配置不完整（mchId/apiV3Key/serialNo/privateKey）');
+    }
+  }
+
+  private assertAppId(cfg: WechatConfig): void {
+    if (!cfg.appId) {
+      throw new Error('微信支付未配置 appId，请在后台「支付配置 → 微信支付」填写关联的 AppID');
     }
   }
 
