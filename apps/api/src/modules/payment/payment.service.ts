@@ -341,6 +341,38 @@ export class PaymentService implements OnModuleInit {
     return { orderNo: order.orderNo, status: order.status };
   }
 
+  /** 邮件支付链接用：订单摘要（不含邮箱/卡密等敏感信息） */
+  async getOrderSummary(orderNo: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { orderNo },
+      select: {
+        id: true,
+        orderNo: true,
+        totalAmount: true,
+        status: true,
+        expireAt: true,
+        createdAt: true,
+        items: { select: { productName: true, quantity: true, unitPrice: true } },
+        shop: { select: { name: true } },
+      },
+    });
+    if (!order) throw new NotFoundException('订单不存在');
+    return {
+      orderId: order.id,
+      orderNo: order.orderNo,
+      totalAmount: order.totalAmount.toString(),
+      status: order.status,
+      expireAt: order.expireAt,
+      createdAt: order.createdAt,
+      shopName: order.shop.name,
+      items: order.items.map((it) => ({
+        productName: it.productName,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice.toString(),
+      })),
+    };
+  }
+
   /**
    * 模拟支付：买家在 /payment/mock-pay 点击"已支付"后，触发回调
    * 仅 mock 通道可用

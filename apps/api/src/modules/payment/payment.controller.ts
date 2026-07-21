@@ -89,6 +89,13 @@ export class PaymentController {
     return this.paymentService.getWechatStatus(orderNo);
   }
 
+  /** 邮件支付链接用：按 orderNo 查订单摘要（公开，雪花 ID 难枚举） */
+  @Get('payment/order-summary/:orderNo')
+  @Public()
+  async orderSummary(@Param('orderNo') orderNo: string) {
+    return this.paymentService.getOrderSummary(orderNo);
+  }
+
   /** 后台：通道列表 */
   @Get('admin/payment-channels')
   @UseGuards(RolesGuard)

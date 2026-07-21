@@ -39,6 +39,11 @@ const routes = [
     component: () => import('@/views/shop/WechatPay.vue'),
   },
   {
+    path: '/pay',
+    name: 'pay-page',
+    component: () => import('@/views/shop/PayPage.vue'),
+  },
+  {
     path: '/admin/login',
     name: 'admin-login',
     component: () => import('@/views/admin/Login.vue'),
