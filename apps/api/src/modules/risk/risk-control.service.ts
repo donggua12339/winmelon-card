@@ -1,5 +1,6 @@
 import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 /**
  * 风控服务
@@ -7,28 +8,58 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
  * - 行为计数（同 IP/邮箱 N 分钟内某动作次数）
  * - 自动拉黑（超阈值自动加入黑名单）
  *
- * 熔断规则（可配置）：
- * - 同 IP 60 分钟内未支付订单 > 5 次 -> 自动拉黑 1 小时
- * - 同邮箱 60 分钟内未支付订单 > 3 次 -> 自动拉黑 1 小时
- * - 同 IP 60 分钟内登录失败 > 10 次 -> 自动拉黑 24 小时
+ * 法务#优化1: 熔断规则从硬编码改为 system_configs 配置（admin 可在 PlatformConfig 调整）
+ * - risk_ip_pending_threshold: 同 IP 未支付订单熔断阈值（默认 5）
+ * - risk_email_pending_threshold: 同邮箱未支付订单熔断阈值（默认 3）
+ * - risk_window_minutes: 统计窗口分钟数（默认 60）
+ * - risk_auto_block_minutes: 自动拉黑时长分钟数（默认 60）
  */
 @Injectable()
 export class RiskControlService {
   private readonly logger = new Logger(RiskControlService.name);
 
-  /** 同 IP 未支付订单熔断阈值 */
-  private static readonly IP_PENDING_THRESHOLD = 5;
-  /** 同邮箱未支付订单熔断阈值 */
-  private static readonly EMAIL_PENDING_THRESHOLD = 3;
-  /** 统计窗口（分钟） */
-  private static readonly WINDOW_MINUTES = 60;
-  /** 自动拉黑时长（分钟） */
-  private static readonly AUTO_BLOCK_MINUTES = 60;
+  /** 硬编码兜底默认值（system_configs 无值时使用） */
+  private static readonly FALLBACK_IP_PENDING_THRESHOLD = 5;
+  private static readonly FALLBACK_EMAIL_PENDING_THRESHOLD = 3;
+  private static readonly FALLBACK_WINDOW_MINUTES = 60;
+  private static readonly FALLBACK_AUTO_BLOCK_MINUTES = 60;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: SystemConfigService,
+  ) {}
+
+  /** 同 IP 未支付订单熔断阈值 */
+  private async ipPendingThreshold(): Promise<number> {
+    return (
+      (await this.config.getNumber('risk_ip_pending_threshold')) ?? RiskControlService.FALLBACK_IP_PENDING_THRESHOLD
+    );
+  }
+
+  /** 同邮箱未支付订单熔断阈值 */
+  private async emailPendingThreshold(): Promise<number> {
+    return (
+      (await this.config.getNumber('risk_email_pending_threshold')) ??
+      RiskControlService.FALLBACK_EMAIL_PENDING_THRESHOLD
+    );
+  }
+
+  /** 统计窗口（分钟） */
+  private async windowMinutes(): Promise<number> {
+    return (await this.config.getNumber('risk_window_minutes')) ?? RiskControlService.FALLBACK_WINDOW_MINUTES;
+  }
+
+  /** 自动拉黑时长（分钟） */
+  private async autoBlockMinutes(): Promise<number> {
+    return (await this.config.getNumber('risk_auto_block_minutes')) ?? RiskControlService.FALLBACK_AUTO_BLOCK_MINUTES;
+  }
 
   /** 下单前风控检查 */
   async checkOrder(ip: string, email: string): Promise<void> {
+    const windowMin = await this.windowMinutes();
+    const ipThreshold = await this.ipPendingThreshold();
+    const emailThreshold = await this.emailPendingThreshold();
+
     // 1. IP 黑名单
     const ipBlocked = await this.isIpBlocked(ip);
     if (ipBlocked) {
@@ -42,16 +73,19 @@ export class RiskControlService {
     }
 
     // 3. 同 IP 未支付订单熔断
-    const ipPending = await this.countRecent('ip', ip, 'order.pending', RiskControlService.WINDOW_MINUTES);
-    if (ipPending >= RiskControlService.IP_PENDING_THRESHOLD) {
-      await this.autoBlockIp(ip, `60 分钟内未支付订单 ${ipPending} 次，触发熔断`);
+    const ipPending = await this.countRecent('ip', ip, 'order.pending', windowMin);
+    if (ipPending >= ipThreshold) {
+      await this.autoBlockIp(ip, `${windowMin} 分钟内未支付订单 ${ipPending} 次，触发熔断（阈值 ${ipThreshold}）`);
       throw new ForbiddenException('该 IP 短时间内未支付订单过多，已被临时限制');
     }
 
     // 4. 同邮箱未支付订单熔断
-    const emailPending = await this.countRecent('email', email, 'order.pending', RiskControlService.WINDOW_MINUTES);
-    if (emailPending >= RiskControlService.EMAIL_PENDING_THRESHOLD) {
-      await this.autoBlockEmail(email, `60 分钟内未支付订单 ${emailPending} 次，触发熔断`);
+    const emailPending = await this.countRecent('email', email, 'order.pending', windowMin);
+    if (emailPending >= emailThreshold) {
+      await this.autoBlockEmail(
+        email,
+        `${windowMin} 分钟内未支付订单 ${emailPending} 次，触发熔断（阈值 ${emailThreshold}）`,
+      );
       throw new ForbiddenException('该邮箱短时间内未支付订单过多，已被临时限制');
     }
   }
@@ -106,7 +140,8 @@ export class RiskControlService {
 
   /** 自动拉黑 IP */
   async autoBlockIp(ip: string, reason: string): Promise<void> {
-    const expiresAt = new Date(Date.now() + RiskControlService.AUTO_BLOCK_MINUTES * 60_000);
+    const minutes = await this.autoBlockMinutes();
+    const expiresAt = new Date(Date.now() + minutes * 60_000);
     await this.prisma.ipBlacklist.upsert({
       where: { ip },
       create: { ip, reason, source: 'auto', expiresAt },
@@ -117,7 +152,8 @@ export class RiskControlService {
 
   /** 自动拉黑邮箱 */
   async autoBlockEmail(email: string, reason: string): Promise<void> {
-    const expiresAt = new Date(Date.now() + RiskControlService.AUTO_BLOCK_MINUTES * 60_000);
+    const minutes = await this.autoBlockMinutes();
+    const expiresAt = new Date(Date.now() + minutes * 60_000);
     await this.prisma.emailBlacklist.upsert({
       where: { email },
       create: { email, reason, source: 'auto', expiresAt },

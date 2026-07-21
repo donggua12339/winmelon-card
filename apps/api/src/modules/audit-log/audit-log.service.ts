@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+
+/** 法务#2: 审计日志最低保留期限（3 年） */
+const AUDIT_LOG_RETENTION_YEARS = 3;
 
 export interface AuditLogInput {
   actorId?: string;
@@ -124,6 +128,24 @@ export class AuditLogService {
       _count: { _all: true },
     });
     return grouped.map((g) => ({ action: g.action, count: g._count._all }));
+  }
+
+  /**
+   * 法务#2: 审计日志清理 cron
+   * 每天凌晨 3 点清理 3 年前的日志（保留期限满足监管要求）
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupOldAuditLogs(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - AUDIT_LOG_RETENTION_YEARS);
+    const result = await this.prisma.auditLog.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    if (result.count > 0) {
+      this.logger.log(
+        `法务#2 清理 ${result.count} 条 ${AUDIT_LOG_RETENTION_YEARS} 年前的审计日志（cutoff=${cutoff.toISOString()}）`,
+      );
+    }
   }
 }
 

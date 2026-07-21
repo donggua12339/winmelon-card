@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto';
 
 const DEFAULT_COMMISSION_RATE = 0.05; // 默认 5% 返佣
 const SYSTEM_CONFIG_KEY = 'commission_rate';
+const NEGATIVE_BALANCE_THRESHOLD = -500; // 法务#1: 负余额熔断阈值
 
 @Injectable()
 export class InviteService {
@@ -396,12 +397,14 @@ export class InviteService {
 
     await this.prisma.$transaction(async (tx) => {
       let totalReversed = 0;
+      const affectedInviters = new Set<string>();
       for (const record of records) {
         // 邀请人 balance 扣减（允许负数，Q12 决策 b）
         await tx.merchant.update({
           where: { id: record.inviterMerchantId },
           data: { balance: { decrement: record.amount } },
         });
+        affectedInviters.add(record.inviterMerchantId);
 
         // source 商户 balance 增加（退回当初扣的返佣）
         await tx.merchant.update({
@@ -419,6 +422,27 @@ export class InviteService {
         });
 
         totalReversed += Number(record.amount);
+      }
+
+      // 法务#1: 负余额熔断 - 冲正后检查所有受影响邀请人的余额
+      for (const inviterId of affectedInviters) {
+        const m = await tx.merchant.findUnique({
+          where: { id: inviterId },
+          select: { balance: true, distributionSuspendedAt: true, withdrawalSuspendedAt: true },
+        });
+        if (m && Number(m.balance) <= NEGATIVE_BALANCE_THRESHOLD) {
+          await tx.merchant.update({
+            where: { id: inviterId },
+            data: {
+              distributionSuspendedAt: m.distributionSuspendedAt ?? new Date(),
+              withdrawalSuspendedAt: m.withdrawalSuspendedAt ?? new Date(),
+              allowBuyerInviteCode: false,
+            },
+          });
+          this.logger.warn(
+            `法务#1 负余额熔断: merchantId=${inviterId} balance=${m.balance} <= ${NEGATIVE_BALANCE_THRESHOLD}, 已暂停分销+提现`,
+          );
+        }
       }
 
       this.logger.log(

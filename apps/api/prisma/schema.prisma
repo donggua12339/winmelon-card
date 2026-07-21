@@ -82,6 +82,13 @@ model Merchant {
   leaderboardDisplayMode String @default("TOP10") @db.VarChar(32)
   // 排行榜显示名（不填则用商户名脱敏）
   leaderboardName   String?  @db.VarChar(128)
+  // 法务#1: 负余额熔断 - 余额 <= -500 时自动冻结分销权限 + 提现
+  distributionSuspendedAt DateTime?  // 分销权限被冻结的时间（null=正常）
+  withdrawalSuspendedAt   DateTime?  // 提现权限被冻结的时间（null=正常）
+  // 法务#3: 处罚状态 - PENDING_PENALTY(等待申诉) / PENALTY_EXECUTED(已执行) / null(无处罚)
+  penaltyStatus    String?  @db.VarChar(32)
+  penaltyReason    String?  @db.Text
+  penaltyStartedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
@@ -96,6 +103,8 @@ model Merchant {
   commissionsAsInviter CommissionRecord[] @relation("CommissionInviter")
   commissionsAsSource  CommissionRecord[] @relation("CommissionSource")
   receivedNotifications Notification[] @relation("NotificationRecipientMerchant")
+
+  penalties      MerchantPenalty[]
 
   @@index([inviterMerchantId])
   @@map("merchants")
@@ -414,6 +423,40 @@ model AuditLog {
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================
+// 法务#3: 商户处罚（申诉期 T+3 工作日）
+// ============================================================
+model MerchantPenalty {
+  id              String   @id @default(uuid())
+  merchantId      String
+  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  // 处罚类型: FRAUD(刷单) / FALSE_INVITE(虚假邀请) / SELF_INVITE(自邀) / OTHER
+  type            String   @db.VarChar(32)
+  // 状态: PENDING(等待申诉) / APPEALED(已申诉) / EXECUTED(已执行) / DISMISSED(已撤销)
+  status          String   @default("PENDING") @db.VarChar(32)
+  reason          String   @db.Text
+  // 处罚内容: FREEZE_ACCOUNT(冻结账号) / REVERSE_COMMISSION(追回返佣) / SUSPEND_DISTRIBUTION(暂停分销)
+  action          String   @db.VarChar(32)
+  // 申诉期截止时间（T+3 工作日）
+  appealDeadline  DateTime
+  // 申诉内容（商户提交）
+  appealContent   String?  @db.Text
+  appealedAt      DateTime?
+  // 处罚执行时间
+  executedAt      DateTime?
+  // 涉及金额（如追回返佣）
+  amount          Decimal? @db.Decimal(12,2)
+  operatorId      String?  @db.VarChar(64)  // 操作人（SUPER_ADMIN）
+  operatorName    String?  @db.VarChar(64)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([merchantId])
+  @@index([status])
+  @@index([appealDeadline])
+  @@map("merchant_penalties")
 }
 
 // ============================================================
