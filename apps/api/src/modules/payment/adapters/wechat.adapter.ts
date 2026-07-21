@@ -40,7 +40,8 @@ interface CertEntry {
   expiresAt: number;
 }
 
-const API_HOST = 'https://api.mch.weixin.qq.com';
+/** 微信 API 基地址：默认直连，可设 WECHAT_API_PROXY_URL 走代理（如 Cloudflare Worker） */
+const API_HOST = process.env.WECHAT_API_PROXY_URL || 'https://api.mch.weixin.qq.com';
 
 @Injectable()
 export class WechatAdapter implements PaymentAdapter {
