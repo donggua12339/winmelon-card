@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { createSign, createVerify, createDecipheriv, randomBytes } from 'crypto';
 import type {
   PaymentAdapter,
@@ -74,7 +74,8 @@ export class WechatAdapter implements PaymentAdapter {
 
     if (!resp.ok || !json.code_url) {
       this.logger.error(`微信下单失败 status=${resp.status} code=${json.code} msg=${json.message}`);
-      throw new Error(`微信下单失败: ${json.message ?? json.code ?? resp.status}`);
+      const detail = json.message ?? json.code ?? `HTTP ${resp.status}`;
+      throw new BadRequestException(`微信支付暂不可用：${detail}`);
     }
 
     // code_url 形如 weixin://wxpay/bizpayurl?pr=xxx，前端 WechatPay 页渲染二维码 + 轮询
@@ -201,7 +202,7 @@ export class WechatAdapter implements PaymentAdapter {
 
     if (!resp.ok) {
       this.logger.error(`微信退款失败 status=${resp.status} code=${json.code} msg=${json.message}`);
-      throw new Error(`微信退款失败: ${json.message ?? json.code ?? resp.status}`);
+      throw new BadRequestException(`微信退款失败：${json.message ?? json.code ?? resp.status}`);
     }
 
     // 微信退款 status: SUCCESS / PROCESSING / ABNORMAL / CLOSED

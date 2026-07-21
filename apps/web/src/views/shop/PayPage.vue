@@ -81,8 +81,8 @@ async function onPay(): Promise<void> {
       channel: channel.value,
     });
     window.location.href = pay.paymentUrl;
-  } catch (err) {
-    console.error(err);
+  } catch {
+    /* http 拦截器已弹错误提示 */
   } finally {
     submitting.value = false;
   }
