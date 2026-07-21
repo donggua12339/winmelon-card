@@ -30,6 +30,7 @@ import { ArticleModule } from './modules/article/article.module';
 import { MerchantPaymentChannelModule } from './modules/merchant-payment-channel/merchant-payment-channel.module';
 import { InviteModule } from './modules/invite/invite.module';
 import { PenaltyModule } from './modules/penalty/penalty.module';
+import { CouponModule } from './modules/coupon/coupon.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { RefundModule } from './modules/refund/refund.module';
@@ -74,6 +75,7 @@ import { ThrottleInterceptor } from './common/interceptors/throttle.interceptor'
     MerchantPaymentChannelModule,
     InviteModule,
     PenaltyModule,
+    CouponModule,
     TicketModule,
     NotificationModule,
     RefundModule,

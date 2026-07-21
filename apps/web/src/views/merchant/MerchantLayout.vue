@@ -1,13 +1,51 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ElMessageBox } from 'element-plus';
 import NotificationBell from '@/components/NotificationBell.vue';
+import { get } from '@/api/http';
 
 const router = useRouter();
 const auth = useAuthStore();
 const themeColor = computed(() => auth.merchantThemeColor ?? '#6366f1');
+
+interface Shop {
+  id: string;
+  code: string;
+  name: string;
+  isOnline: boolean;
+}
+
+const shopSwitcherOpen = ref(false);
+
+async function loadShops(): Promise<void> {
+  if (auth.shops.length > 0) return;
+  try {
+    const profile = await get<{
+      name: string;
+      themeColor?: string | null;
+      shops: Shop[];
+    }>('/merchant/profile');
+    auth.setMerchantInfo({
+      merchantName: profile.name,
+      themeColor: profile.themeColor ?? undefined,
+      shops: profile.shops.map((s) => ({ id: s.id, code: s.code, name: s.name, isOnline: s.isOnline })),
+    });
+  } catch {
+    // 忽略，不阻塞页面
+  }
+}
+
+function onShopChange(shopId: string): void {
+  auth.setCurrentShop(shopId || null);
+  shopSwitcherOpen.value = false;
+}
+
+const currentShopName = computed(() => {
+  const s = auth.shops.find((x) => x.id === auth.currentShopId);
+  return s?.name ?? '全部店铺';
+});
 
 async function onLogout(): Promise<void> {
   await ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' });
@@ -18,6 +56,8 @@ async function onLogout(): Promise<void> {
 function onChangePassword(): void {
   router.push('/merchant/change-password');
 }
+
+onMounted(loadShops);
 
 const menuItems = [
   { path: '/merchant/dashboard', icon: '📊', label: '数据看板' },
@@ -63,6 +103,22 @@ const menuItems = [
       <header class="topbar">
         <div class="topbar-left">
           <h1 class="page-title-text">{{ getPageTitle($route.path) }}</h1>
+          <!-- 店铺切换器 -->
+          <el-dropdown v-if="auth.shops.length > 0" trigger="click" @command="onShopChange">
+            <div class="shop-switcher">
+              <span class="shop-icon">🏪</span>
+              <span class="shop-name">{{ currentShopName }}</span>
+              <span class="shop-caret">▾</span>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item :command="'' as any">全部店铺</el-dropdown-item>
+                <el-dropdown-item v-for="s in auth.shops" :key="s.id" :command="s.id">
+                  {{ s.name }} <span style="color: var(--wm-text-tertiary); font-size: 12px">/{{ s.code }}</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <div class="topbar-right">
           <NotificationBell />
@@ -256,6 +312,7 @@ void ({} as RouteLocationNormalizedLoaded);
 .topbar-left {
   display: flex;
   align-items: center;
+  gap: var(--wm-space-md, 16px);
 }
 
 .page-title-text {
@@ -263,6 +320,43 @@ void ({} as RouteLocationNormalizedLoaded);
   font-size: 17px;
   font-weight: 700;
   color: var(--wm-text-primary);
+}
+
+.shop-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--wm-radius-sm, 6px);
+  border: 1px solid var(--wm-border-default, #e5e7eb);
+  background: var(--wm-bg-card, #fff);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--wm-text-primary);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.shop-switcher:hover {
+  border-color: var(--wm-border-hover, #d1d5db);
+  background: var(--wm-bg-hover, #f4f4f5);
+}
+
+.shop-icon {
+  font-size: 14px;
+}
+
+.shop-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-caret {
+  color: var(--wm-text-tertiary, #9ca3af);
+  font-size: 11px;
 }
 
 .topbar-right {

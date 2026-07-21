@@ -20,6 +20,7 @@ interface Product {
   isAutoDelivery: boolean;
   sort: number;
   seekallTier?: 'TRIAL' | 'MONTHLY' | 'LIFETIME' | null;
+  xcjTier?: string | null;
   createdAt: string;
   stock: ProductStock;
 }
@@ -66,6 +67,7 @@ const form = reactive({
   isAutoDelivery: true,
   sort: 0,
   seekallTier: '' as '' | 'TRIAL' | 'MONTHLY' | 'LIFETIME',
+  xcjTier: '' as string,
 });
 
 const rules: FormRules<typeof form> = {
@@ -122,6 +124,7 @@ function openCreate(): void {
     isAutoDelivery: true,
     sort: 0,
     seekallTier: '',
+    xcjTier: '',
   });
   dialogVisible.value = true;
 }
@@ -138,6 +141,7 @@ function openEdit(row: Product): void {
     isAutoDelivery: row.isAutoDelivery,
     sort: row.sort,
     seekallTier: row.seekallTier ?? '',
+    xcjTier: row.xcjTier ?? '',
   });
   dialogVisible.value = true;
 }
@@ -158,6 +162,7 @@ async function onSubmit(): Promise<void> {
       isAutoDelivery: form.isAutoDelivery,
       sort: form.sort,
       seekallTier: form.seekallTier || undefined,
+      xcjTier: form.xcjTier || undefined,
     };
     if (dialogMode.value === 'create') {
       if (!form.shopId) {
@@ -259,6 +264,12 @@ onMounted(() => {
             <span v-else class="text-tertiary">-</span>
           </template>
         </el-table-column>
+        <el-table-column label="小城笺" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.xcjTier" type="warning" size="small">{{ row.xcjTier }}</el-tag>
+            <span v-else class="text-tertiary">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="sort" label="排序" width="80" />
         <el-table-column prop="createdAt" label="创建时间" width="170">
           <template #default="{ row }">{{ new Date(row.createdAt).toLocaleString() }}</template>
@@ -330,6 +341,23 @@ onMounted(() => {
           <div class="form-item-tip">
             仅 SeekAll 会员卡商品需选择。付款成功后 WM 会自动通知 SeekAll 生成 License code, 买家凭 License code 在
             SeekAll SDK 激活。非 SeekAll 商品留空(不触发 webhook)。
+          </div>
+        </el-form-item>
+        <el-form-item label="小城笺档位">
+          <el-select
+            v-model="form.xcjTier"
+            placeholder="非小城笺商品留空"
+            clearable
+            filterable
+            allow-create
+            style="width: 100%"
+          >
+            <el-option label="试用 (TRIAL)" value="TRIAL" />
+            <el-option label="月度 (MONTHLY)" value="MONTHLY" />
+            <el-option label="终身 (LIFETIME)" value="LIFETIME" />
+          </el-select>
+          <div class="form-item-tip">
+            仅小城笺(ADR 0076)会员商品需选择。付款成功后 WM 会自动通知小城笺生成会员权益。与 SeekAll 档位互斥。
           </div>
         </el-form-item>
         <el-form-item label="排序">

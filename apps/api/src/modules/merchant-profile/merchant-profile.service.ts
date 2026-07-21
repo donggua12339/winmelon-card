@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -150,8 +150,8 @@ export class MerchantProfileService {
     return { ok: true };
   }
 
-  /** 商户工作台数据看板（只算自己店铺） */
-  async getDashboardStats(merchantId: string) {
+  /** 商户工作台数据看板（只算自己店铺；可按 shopId 筛选单店铺） */
+  async getDashboardStats(merchantId: string, shopId?: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -159,38 +159,49 @@ export class MerchantProfileService {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    // 查商户所有店铺 ID（用于 UV 统计）
-    const shops = await this.prisma.shop.findMany({
-      where: { merchantId },
-      select: { id: true },
-    });
-    const shopIds = shops.map((s) => s.id);
+    // P2-7: 按 shopId 筛选单店铺；不传则查商户所有店铺
+    let shopIds: string[];
+    if (shopId) {
+      // 校验 shopId 归属当前商户
+      const shop = await this.prisma.shop.findFirst({
+        where: { id: shopId, merchantId },
+        select: { id: true },
+      });
+      if (!shop) throw new ForbiddenException('店铺不存在或无权操作');
+      shopIds = [shopId];
+    } else {
+      const shops = await this.prisma.shop.findMany({
+        where: { merchantId },
+        select: { id: true },
+      });
+      shopIds = shops.map((s) => s.id);
+    }
 
     const [todayOrders, todayPaid, monthPaid, pendingOrders, totalOrders, totalRevenueRaw, topProducts, orderTrend] =
       await Promise.all([
         this.prisma.order.count({
-          where: { shop: { merchantId }, createdAt: { gte: todayStart } },
+          where: { shopId: { in: shopIds }, createdAt: { gte: todayStart } },
         }),
         this.prisma.order.aggregate({
           _sum: { totalAmount: true },
           _count: true,
-          where: { shop: { merchantId }, status: 'PAID', paidAt: { gte: todayStart } },
+          where: { shopId: { in: shopIds }, status: 'PAID', paidAt: { gte: todayStart } },
         }),
         this.prisma.order.aggregate({
           _sum: { totalAmount: true },
           _count: true,
-          where: { shop: { merchantId }, status: 'PAID', paidAt: { gte: monthStart } },
+          where: { shopId: { in: shopIds }, status: 'PAID', paidAt: { gte: monthStart } },
         }),
         this.prisma.order.count({
-          where: { shop: { merchantId }, status: 'PENDING' },
+          where: { shopId: { in: shopIds }, status: 'PENDING' },
         }),
         this.prisma.order.count({
-          where: { shop: { merchantId } },
+          where: { shopId: { in: shopIds } },
         }),
         this.prisma.payment.aggregate({
           _sum: { amount: true },
           where: {
-            order: { shop: { merchantId } },
+            order: { shopId: { in: shopIds } },
             status: 'SUCCESS',
             paidAt: { gte: monthStart },
           },

@@ -18,6 +18,14 @@ export interface LoginResult {
 
 const MERCHANT_THEME_KEY = 'wm_merchant_theme';
 const MERCHANT_NAME_KEY = 'wm_merchant_name';
+const MERCHANT_CURRENT_SHOP_KEY = 'wm_merchant_current_shop';
+
+export interface MerchantShop {
+  id: string;
+  code: string;
+  name: string;
+  isOnline: boolean;
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // P1-6: access token 内存化（页面刷新即丢失，依赖 refresh cookie 自动换新）
@@ -25,6 +33,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<LoginResult['user'] | null>(null);
   const merchantName = ref<string | null>(localStorage.getItem(MERCHANT_NAME_KEY));
   const merchantThemeColor = ref<string | null>(localStorage.getItem(MERCHANT_THEME_KEY));
+  const shops = ref<MerchantShop[]>([]);
+  const currentShopId = ref<string | null>(localStorage.getItem(MERCHANT_CURRENT_SHOP_KEY));
 
   const isAuthenticated = computed(() => !!accessToken.value);
   const roles = computed<string[]>(() => user.value?.roles ?? []);
@@ -65,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     // refreshToken 现在走 httpOnly cookie，不需要本地存储
   }
 
-  function setMerchantInfo(info: { merchantName?: string; themeColor?: string }): void {
+  function setMerchantInfo(info: { merchantName?: string; themeColor?: string; shops?: MerchantShop[] }): void {
     if (info.merchantName !== undefined) {
       merchantName.value = info.merchantName;
       localStorage.setItem(MERCHANT_NAME_KEY, info.merchantName);
@@ -74,6 +84,24 @@ export const useAuthStore = defineStore('auth', () => {
       merchantThemeColor.value = info.themeColor;
       localStorage.setItem(MERCHANT_THEME_KEY, info.themeColor);
       applyThemeColor(info.themeColor);
+    }
+    if (info.shops !== undefined) {
+      shops.value = info.shops;
+      // 如果当前选中的店铺不在列表里，重置为第一个（或 null）
+      if (currentShopId.value && !info.shops.find((s) => s.id === currentShopId.value)) {
+        setCurrentShop(info.shops[0]?.id ?? null);
+      } else if (!currentShopId.value && info.shops.length > 0) {
+        setCurrentShop(info.shops[0]!.id);
+      }
+    }
+  }
+
+  function setCurrentShop(shopId: string | null): void {
+    currentShopId.value = shopId;
+    if (shopId) {
+      localStorage.setItem(MERCHANT_CURRENT_SHOP_KEY, shopId);
+    } else {
+      localStorage.removeItem(MERCHANT_CURRENT_SHOP_KEY);
     }
   }
 
@@ -144,6 +172,8 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     merchantName,
     merchantThemeColor,
+    shops,
+    currentShopId,
     isAuthenticated,
     roles,
     defaultRedirect,
@@ -152,6 +182,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     setSession,
     setMerchantInfo,
+    setCurrentShop,
     logout,
     bootstrapFromCookie,
     fetchMe,

@@ -20,7 +20,12 @@ const form = reactive({
   shopCode: '',
   businessScope: '',
   inviteCode: '',
+  agreement: false,
 });
+
+const agreementUrl = 'https://github.com/donggua12339/winmelon-card/blob/main/docs/MERCHANT-SERVICE-AGREEMENT.md';
+const distributionAgreementUrl =
+  'https://github.com/donggua12339/winmelon-card/blob/main/docs/MERCHANT-DISTRIBUTION-AGREEMENT.md';
 
 const rules: FormRules<typeof form> = {
   contactEmail: [
@@ -39,6 +44,12 @@ const rules: FormRules<typeof form> = {
       pattern: /^[a-z0-9-]{3,32}$/,
       message: '只能小写字母、数字、短横线，3-32 位',
       trigger: 'blur',
+    },
+  ],
+  agreement: [
+    {
+      validator: (_r, v: boolean, cb) => (v ? cb() : cb(new Error('请阅读并同意商户协议'))),
+      trigger: 'change',
     },
   ],
 };
@@ -158,7 +169,23 @@ function gotoLogin(): void {
             <div class="tip">填写后将与邀请人建立多级分销关系，邀请人可获得返佣</div>
           </el-form-item>
 
-          <el-button type="primary" size="large" :loading="loading" native-type="submit" class="submit-btn">
+          <el-form-item label="商户协议" prop="agreement">
+            <el-checkbox v-model="form.agreement">
+              我已阅读并同意
+              <a :href="agreementUrl" target="_blank" rel="noopener">《WM 发卡网商户服务协议》</a>
+              及其补充附件
+              <a :href="distributionAgreementUrl" target="_blank" rel="noopener">《商户分销协议》</a>
+            </el-checkbox>
+          </el-form-item>
+
+          <el-button
+            type="primary"
+            size="large"
+            :loading="loading"
+            native-type="submit"
+            class="submit-btn"
+            :disabled="!form.agreement"
+          >
             提交申请并发送激活邮件
           </el-button>
         </el-form>

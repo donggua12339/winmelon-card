@@ -68,4 +68,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsEnum(['TRIAL', 'MONTHLY', 'LIFETIME'])
   seekallTier?: 'TRIAL' | 'MONTHLY' | 'LIFETIME';
+
+  // 小城笺 webhook: 标记此商品为小城笺会员商品,非小城笺商品留空
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  xcjTier?: string;
 }

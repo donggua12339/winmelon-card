@@ -10,6 +10,9 @@ interface ShopInfo {
   announcement: string | null;
   footerHtml: string | null;
   isOnline: boolean;
+  bannerUrl?: string | null;
+  logoUrl?: string | null;
+  featuredProductIds?: string | null;
   updatedAt: string;
 }
 
@@ -22,6 +25,9 @@ const form = reactive({
   announcement: '',
   footerHtml: '',
   isOnline: true,
+  bannerUrl: '',
+  logoUrl: '',
+  featuredProductIds: '',
 });
 
 async function fetchShop(): Promise<void> {
@@ -32,6 +38,9 @@ async function fetchShop(): Promise<void> {
     form.announcement = shop.value.announcement ?? '';
     form.footerHtml = shop.value.footerHtml ?? '';
     form.isOnline = shop.value.isOnline;
+    form.bannerUrl = shop.value.bannerUrl ?? '';
+    form.logoUrl = shop.value.logoUrl ?? '';
+    form.featuredProductIds = shop.value.featuredProductIds ?? '';
   } finally {
     loading.value = false;
   }
@@ -46,6 +55,9 @@ async function onSave(): Promise<void> {
       announcement: form.announcement || null,
       footerHtml: form.footerHtml || null,
       isOnline: form.isOnline,
+      bannerUrl: form.bannerUrl || null,
+      logoUrl: form.logoUrl || null,
+      featuredProductIds: form.featuredProductIds || null,
     });
     shop.value = updated;
     ElMessage.success('保存成功');
@@ -96,6 +108,25 @@ onMounted(fetchShop);
             placeholder="自定义底部 HTML，如统计代码、客服代码等"
           />
           <div class="tip">支持原始 HTML，请确保内容安全，避免 XSS</div>
+        </el-form-item>
+
+        <h3 class="subsection-title">店铺装修</h3>
+        <el-form-item label="Banner 图 URL">
+          <el-input v-model="form.bannerUrl" placeholder="https://.../banner.png（建议 1200×400）" maxlength="512" />
+          <div class="tip">店铺首页顶部横幅图，留空则不显示</div>
+        </el-form-item>
+        <el-form-item label="Logo URL">
+          <el-input v-model="form.logoUrl" placeholder="https://.../logo.png（建议 200×200）" maxlength="512" />
+          <div class="tip">店铺头像/Logo，留空则用首字母占位</div>
+        </el-form-item>
+        <el-form-item label="精选商品 ID">
+          <el-input
+            v-model="form.featuredProductIds"
+            placeholder='JSON 数组，如 ["prodId1","prodId2"]'
+            type="textarea"
+            :rows="2"
+          />
+          <div class="tip">精选商品会置顶显示，格式为 JSON 数组字符串</div>
         </el-form-item>
 
         <el-form-item label="店铺状态">
@@ -178,5 +209,14 @@ onMounted(fetchShop);
   font-size: 12px;
   margin-top: var(--wm-space-2xs);
   line-height: 1.5;
+}
+
+.subsection-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wm-text-primary);
+  margin: var(--wm-space-lg) 0 var(--wm-space-sm);
+  padding-top: var(--wm-space-md);
+  border-top: 1px dashed var(--wm-border-default);
 }
 </style>

@@ -294,19 +294,38 @@ export class ShopService {
   async updateShop(
     merchantId: string,
     shopId: string,
-    dto: { name?: string; announcement?: string | null; footerHtml?: string | null; isOnline?: boolean },
+    dto: {
+      name?: string;
+      announcement?: string | null;
+      footerHtml?: string | null;
+      isOnline?: boolean;
+      bannerUrl?: string | null;
+      logoUrl?: string | null;
+      featuredProductIds?: string | null;
+    },
   ) {
     const shop = await this.prisma.shop.findFirst({ where: { id: shopId, merchantId } });
     if (!shop) {
       throw new NotFoundException('店铺不存在或无权操作');
     }
 
-    const data: { name?: string; announcement?: string | null; footerHtml?: string | null; isOnline?: boolean } = {};
+    const data: {
+      name?: string;
+      announcement?: string | null;
+      footerHtml?: string | null;
+      isOnline?: boolean;
+      bannerUrl?: string | null;
+      logoUrl?: string | null;
+      featuredProductIds?: string | null;
+    } = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.announcement !== undefined) data.announcement = dto.announcement;
     if (dto.footerHtml !== undefined)
       data.footerHtml = dto.footerHtml === null ? null : sanitizeRichHtml(dto.footerHtml);
     if (dto.isOnline !== undefined) data.isOnline = dto.isOnline;
+    if (dto.bannerUrl !== undefined) data.bannerUrl = dto.bannerUrl;
+    if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl;
+    if (dto.featuredProductIds !== undefined) data.featuredProductIds = dto.featuredProductIds;
 
     const updated = await this.prisma.shop.update({
       where: { id: shopId },
@@ -318,6 +337,9 @@ export class ShopService {
         announcement: true,
         footerHtml: true,
         isOnline: true,
+        bannerUrl: true,
+        logoUrl: true,
+        featuredProductIds: true,
         updatedAt: true,
       },
     });

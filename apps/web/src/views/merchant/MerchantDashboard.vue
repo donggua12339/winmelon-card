@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { get } from '@/api/http';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 interface FunnelStep {
   uv: number;
@@ -85,11 +86,21 @@ function formatShortDate(s: string): string {
 async function fetchStats(): Promise<void> {
   loading.value = true;
   try {
-    stats.value = await get<DashboardStats>('/merchant/dashboard/stats');
+    const params: Record<string, string> = {};
+    if (auth.currentShopId) params.shopId = auth.currentShopId;
+    stats.value = await get<DashboardStats>('/merchant/dashboard/stats', { params });
   } finally {
     loading.value = false;
   }
 }
+
+const auth = useAuthStore();
+
+// P2-7: 店铺切换时重新加载
+watch(
+  () => auth.currentShopId,
+  () => fetchStats(),
+);
 
 onMounted(fetchStats);
 </script>

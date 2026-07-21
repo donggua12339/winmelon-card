@@ -69,6 +69,8 @@ const menuItems = [
   { path: '/admin/audit-logs', icon: '📋', label: '审计日志' },
   { path: '/admin/webhook', icon: '🔔', label: 'Webhook 监控' },
   { path: '/admin/platform-config', icon: '⚙️', label: '平台配置' },
+  { path: '/admin/coupons', icon: '🎟️', label: '补贴券' },
+  { path: '/admin/content-marketing', icon: '📝', label: '内容营销' },
   { path: '/admin/system', icon: '⚙️', label: '系统配置' },
 ];
 </script>

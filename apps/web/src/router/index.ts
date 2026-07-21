@@ -114,6 +114,16 @@ const routes = [
         component: () => import('@/views/admin/PlatformConfig.vue'),
       },
       {
+        path: 'coupons',
+        name: 'admin-coupons',
+        component: () => import('@/views/admin/Coupons.vue'),
+      },
+      {
+        path: 'content-marketing',
+        name: 'admin-content-marketing',
+        component: () => import('@/views/admin/ContentMarketing.vue'),
+      },
+      {
         path: 'stats',
         name: 'admin-stats',
         component: () => import('@/views/admin/AdvancedStats.vue'),
