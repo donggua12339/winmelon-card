@@ -1,4 +1,6 @@
 {
-  "*.{ts,vue}": ["prettier --write", "eslint --fix --max-warnings 0"],
+  "*.{ts,vue}": ["prettier --write"],
+  "apps/**/src/**/*.{ts,vue}": ["eslint --fix --max-warnings 0"],
+  "packages/**/src/**/*.{ts,vue}": ["eslint --fix --max-warnings 0"],
   "*.{json,md,yml,yaml}": ["prettier --write"]
 }

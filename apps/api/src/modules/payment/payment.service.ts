@@ -8,6 +8,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { EpayAdapter } from './adapters/epay.adapter';
 import { MockAdapter } from './adapters/mock.adapter';
 import { UsdtAdapter } from './adapters/usdt.adapter';
+import { WechatAdapter } from './adapters/wechat.adapter';
 import type { PaymentAdapter, NotifyResult } from './payment-adapter.interface';
 import { ORDER_PAID_EVENT, type OrderPaidPayload } from '../order/events/order-paid.event';
 
@@ -28,6 +29,7 @@ export class PaymentService implements OnModuleInit {
     private readonly epayAdapter: EpayAdapter,
     private readonly mockAdapter: MockAdapter,
     private readonly usdtAdapter: UsdtAdapter,
+    private readonly wechatAdapter: WechatAdapter,
     config: ConfigService,
   ) {
     this.baseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:3000');
@@ -35,6 +37,7 @@ export class PaymentService implements OnModuleInit {
       [epayAdapter.code, epayAdapter],
       [mockAdapter.code, mockAdapter],
       [usdtAdapter.code, usdtAdapter],
+      [wechatAdapter.code, wechatAdapter],
     ]);
   }
 
@@ -174,14 +177,32 @@ export class PaymentService implements OnModuleInit {
     try {
       notify = adapter.parseNotify(rawBody, headers, config);
     } catch (err) {
-      this.logger.error(`回调验签失败 channel=${channelCode}: ${(err as Error).message}`);
-      await this.auditLog.record({
-        action: 'payment.notify.verify_failed',
-        resourceType: 'payment_channel',
-        resourceId: channelCode,
-        afterData: { raw: rawBody.slice(0, 500) },
-      });
-      return 'fail';
+      // 微信支付：平台证书首次未加载或轮换时，验签/取证书会失败，刷新平台证书后重试一次
+      if (channelCode === 'wechat' && adapter instanceof WechatAdapter) {
+        try {
+          this.logger.warn(`微信回调验签失败，刷新平台证书后重试: ${(err as Error).message}`);
+          await adapter.refreshPlatformCerts(config);
+          notify = adapter.parseNotify(rawBody, headers, config);
+        } catch (retryErr) {
+          this.logger.error(`微信回调重试仍失败 channel=${channelCode}: ${(retryErr as Error).message}`);
+          await this.auditLog.record({
+            action: 'payment.notify.verify_failed',
+            resourceType: 'payment_channel',
+            resourceId: channelCode,
+            afterData: { raw: rawBody.slice(0, 500) },
+          });
+          return 'fail';
+        }
+      } else {
+        this.logger.error(`回调验签失败 channel=${channelCode}: ${(err as Error).message}`);
+        await this.auditLog.record({
+          action: 'payment.notify.verify_failed',
+          resourceType: 'payment_channel',
+          resourceId: channelCode,
+          afterData: { raw: rawBody.slice(0, 500) },
+        });
+        return 'fail';
+      }
     }
 
     if (!notify.success) {
@@ -308,6 +329,19 @@ export class PaymentService implements OnModuleInit {
   }
 
   /**
+   * 微信支付页轮询：按 orderNo 查订单支付状态（公开，仅返回状态，不含卡密/金额敏感信息）
+   * orderNo 为雪花 ID，难以枚举，风险可控（与 /payment/usdt/info 同先例）
+   */
+  async getWechatStatus(orderNo: string): Promise<{ orderNo: string; status: string }> {
+    const order = await this.prisma.order.findFirst({
+      where: { orderNo },
+      select: { orderNo: true, status: true },
+    });
+    if (!order) throw new NotFoundException('订单不存在');
+    return { orderNo: order.orderNo, status: order.status };
+  }
+
+  /**
    * 模拟支付：买家在 /payment/mock-pay 点击"已支付"后，触发回调
    * 仅 mock 通道可用
    */
@@ -383,6 +417,7 @@ export class PaymentService implements OnModuleInit {
         orderNo: '', // 由通道要求决定；易支付用 payment.tradeNo 反查
         originalTradeNo: payment.tradeNo,
         amount: params.amount,
+        originalAmount: payment.amount.toString(),
         reason: params.reason,
       },
       config,

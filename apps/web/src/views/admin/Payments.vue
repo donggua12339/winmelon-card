@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import { get, put } from '@/api/http';
 
@@ -79,11 +79,28 @@ async function toggleAvailable(ch: Channel): Promise<void> {
 
 function channelDesc(code: string): string {
   const map: Record<string, string> = {
+    wechat: '微信支付 Native 扫码（API v3），需商户号 + APIv3 密钥 + 商户证书',
     epay: '彩虹易支付，支持支付宝/微信，个人免签约',
     mock: '模拟支付通道，仅用于开发测试',
   };
   return map[code] ?? '';
 }
+
+function channelIcon(code: string): string {
+  const map: Record<string, string> = {
+    wechat: '💚',
+    epay: '🌈',
+    mock: '🧪',
+  };
+  return map[code] ?? '💳';
+}
+
+const configPlaceholder = computed(() => {
+  if (editForm.code === 'wechat') {
+    return '{"appId":"wx...","mchId":"1115541771","apiV3Key":"32字节密钥","serialNo":"证书序列号","privateKey":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"}';
+  }
+  return '{"pid":"","key":"","apiDomain":""}';
+});
 
 onMounted(fetchChannels);
 </script>
@@ -98,7 +115,7 @@ onMounted(fetchChannels);
     <div v-loading="loading" class="channels-grid">
       <div v-for="ch in channels" :key="ch.id" class="glass channel-card">
         <div class="channel-header">
-          <div class="channel-icon">{{ ch.code === 'epay' ? '🌈' : '🧪' }}</div>
+          <div class="channel-icon">{{ channelIcon(ch.code) }}</div>
           <div class="channel-info">
             <div class="channel-name">{{ ch.name }}</div>
             <div class="channel-code">{{ ch.code }}</div>
@@ -125,12 +142,12 @@ onMounted(fetchChannels);
           <el-switch v-model="editForm.isAvailable" />
         </el-form-item>
         <el-form-item label="配置（JSON）">
-          <el-input
-            v-model="editForm.config"
-            type="textarea"
-            :rows="8"
-            placeholder='{"pid":"","key":"","apiDomain":""}'
-          />
+          <el-input v-model="editForm.config" type="textarea" :rows="8" :placeholder="configPlaceholder" />
+          <div v-if="editForm.code === 'wechat'" class="config-tip">
+            微信支付必填字段：<code>appId</code>（关联 AppID）、<code>mchId</code>（商户号）、<code>apiV3Key</code>（32
+            字节 APIv3 密钥）、<code>serialNo</code>（商户证书序列号）、<code>privateKey</code>（apiclient_key.pem
+            私钥全文，含 BEGIN/END PRIVATE KEY 行，换行用 \n）。私钥将以 AES-256-GCM 加密存储。
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -226,5 +243,20 @@ onMounted(fetchChannels);
 .updated {
   font-size: 12px;
   color: var(--wm-text-tertiary);
+}
+
+.config-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--wm-text-secondary);
+}
+
+.config-tip code {
+  font-family: var(--wm-font-mono);
+  background: var(--wm-bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
 }
 </style>

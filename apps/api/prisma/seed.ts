@@ -65,6 +65,18 @@ async function main(): Promise<void> {
     },
   });
 
+  // 微信支付（Native 扫码，API v3）
+  await prisma.paymentChannel.upsert({
+    where: { code: 'wechat' },
+    update: {},
+    create: {
+      code: 'wechat',
+      name: '微信支付',
+      isAvailable: false,
+      config: '{}',
+    },
+  });
+
   // 模拟支付通道（开发测试用，生产环境禁用）
   await prisma.paymentChannel.upsert({
     where: { code: 'mock' },

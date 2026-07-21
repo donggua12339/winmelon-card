@@ -74,6 +74,8 @@ export interface RefundParams {
   originalTradeNo?: string;
   /** 退款金额（元，2 位小数） */
   amount: string;
+  /** 原订单总金额（元，2 位小数；微信退款需上送 total，缺省则按全额退处理） */
+  originalAmount?: string;
   /** 退款原因（透传给通道） */
   reason?: string;
 }

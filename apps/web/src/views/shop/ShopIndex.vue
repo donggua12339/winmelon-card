@@ -45,7 +45,7 @@ const orderForm = ref({
   buyerEmail: '',
   buyerContact: '',
   quantity: 1,
-  channel: 'mock' as 'mock' | 'usdt',
+  channel: 'wechat' as 'wechat' | 'mock' | 'usdt',
 });
 const submitting = ref(false);
 
@@ -73,7 +73,7 @@ function openOrder(product: Product): void {
     buyerEmail: '',
     buyerContact: '',
     quantity: 1,
-    channel: 'mock',
+    channel: 'wechat',
   };
   orderDialogVisible.value = true;
 }
@@ -211,8 +211,9 @@ onMounted(() => {
       <div class="order-row">
         <label>支付方式</label>
         <el-radio-group v-model="orderForm.channel">
-          <el-radio value="mock">模拟支付（测试）</el-radio>
+          <el-radio value="wechat">微信支付</el-radio>
           <el-radio value="usdt">USDT（TRC20）</el-radio>
+          <el-radio value="mock">模拟支付（测试）</el-radio>
         </el-radio-group>
       </div>
 

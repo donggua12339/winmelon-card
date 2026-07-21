@@ -14,7 +14,7 @@ class CreatePaymentDto {
   @IsString()
   orderId!: string;
 
-  @IsIn(['epay', 'mock', 'usdt'])
+  @IsIn(['epay', 'mock', 'usdt', 'wechat'])
   channel!: string;
 }
 
@@ -80,6 +80,13 @@ export class PaymentController {
   @Public()
   async usdtInfo(@Param('orderNo') orderNo: string) {
     return this.usdtService.getPaymentInfo(orderNo);
+  }
+
+  /** 微信支付状态轮询：WechatPay 页扫码后轮询订单状态 */
+  @Get('payment/wechat/status/:orderNo')
+  @Public()
+  async wechatStatus(@Param('orderNo') orderNo: string) {
+    return this.paymentService.getWechatStatus(orderNo);
   }
 
   /** 后台：通道列表 */
