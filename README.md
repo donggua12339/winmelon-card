@@ -136,3 +136,19 @@ wm-card/
 ## License
 
 MIT
+
+
+---
+
+## 适用场景 / Use cases
+
+WM 适合**个人开发者与小团队**售卖虚拟商品（卡密、激活码、账号、教程、充值码等），需要"付款即自动发货、零人工"的场景：
+
+- **卡密 / 激活码自动发货**：付款回调触发原子性取卡，AES-256-GCM 加密库存，并发不超卖。
+- **多支付通道**：微信 / 支付宝 / 易支付 / USDT 等，适配器模式可插拔，加一条通道不动主流程。
+- **多商户 + 独立域名**：商户自助入驻、路径式店铺与自定义域名绑定、T+3 / T+7 结算与三维对账。
+- **对外集成**：OpenAPI（`sk_live_` Key + 读写 scope）+ Python / Node SDK，付款成功 webhook 可联动 License 自动签发。
+
+> 关键词 / Keywords：虚拟发卡平台、卡密自动发货、开源发卡系统、virtual card selling platform、auto-delivery card key system、open-source、self-hosted、WeChat Pay、USDT TRC20。
+
+在线体验：[winmelon.cn](https://winmelon.cn) ｜ 自部署见上文「快速开始」（`cp .env.example .env && docker compose up -d`）。
